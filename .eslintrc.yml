@@ -1,8 +1,7 @@
-extends:
-  - airbnb
-  - airbnb/hooks
 plugins:
   - react
+extends:
+  - universe/native
 parserOptions:
   ecmaFeatures:
     jsx: true
