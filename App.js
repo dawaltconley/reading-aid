@@ -1,9 +1,12 @@
+import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
 // const brandColor = 'hsl(180, 90%, 67%)';
 const brandColor = 'hsl(268, 100%, 46%)';
+
+const timeUpSoundFile = require('./assets/bell.mp3');
 
 const styles = StyleSheet.create({
   container: {
@@ -21,8 +24,6 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
-
-const samplePageTimes = [124, 123, 754, 4, 200, 180, 152];
 
 class PageTimes {
   constructor(array, maxBufferLength) {
@@ -42,7 +43,6 @@ class PageTimes {
     } else {
       const low = Math.floor(middle),
         high = Math.ceil(middle);
-      console.log({ middle, low, high, sorted });
       return (sorted[low] + sorted[high]) / 2;
     }
   }
@@ -59,32 +59,57 @@ function PageCounter(props) {
   const {
     initialPage = 1,
     pageBuffer = 7,
-    // extraTime = 30000,
-    extraTime = 3000,
+    extraTime = 30000,
   } = props;
+
+  const [isActive, setActive] = useState(false);
   const [pageStart, setPageStart] = useState(new Date());
   const [currentPage, setPage] = useState(initialPage);
   const [pageTimes, setPageTimes] = useState(new PageTimes([], pageBuffer));
-  const timeAllowed = pageTimes.buffer.length && pageTimes.median + extraTime;
-  let timer;
+  const [overTimeSound, setOverTimeSound] = useState(null);
 
   const pageTurn = () => {
     const pageEnd = new Date();
-    pageTimes.add(pageEnd - pageStart);
-    if (timer) clearTimeout();
-
-    setPage(currentPage + 1);
+    if (isActive) {
+      pageTimes.add(pageEnd - pageStart);
+      setPage(currentPage + 1);
+    } else {
+      setActive(true);
+    }
     setPageStart(pageEnd);
     setPageTimes(pageTimes);
   };
 
-  const outOfTime = () => {
-    // play sound
-  };
+  const displayText = isActive ? `Current page: ${currentPage}` : 'Press anywhere to start';
 
-  if (timeAllowed) {
-    timer = setTimeout(outOfTime, timeAllowed);
-  }
+  // loads a sound file when component mounts and holds in memory until unmount
+  // TODO: check if this is better or worse than loading each time / as needed
+  useEffect(() => {
+    // load sound
+    Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) =>
+      setOverTimeSound(sound)
+    );
+    // cleanup
+    if (overTimeSound) {
+      return overTimeSound.unloadAsync.bind(overTimeSound);
+    }
+  }, []);
+
+  // play sound after timer
+  useEffect(() => {
+    const timeAllowed = pageTimes.buffer.length && pageTimes.median + extraTime;
+    if (timeAllowed && overTimeSound) {
+      const timeAlready = new Date() - pageStart;
+      const timeLeft = timeAllowed - timeAlready;
+
+      const timer = setTimeout(() => overTimeSound.replayAsync(), timeLeft);
+
+      // cleanup
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [overTimeSound, pageTimes, pageStart, extraTime]);
 
   return (
     <Pressable
@@ -95,7 +120,7 @@ function PageCounter(props) {
       }}
       onPress={pageTurn}
     >
-      <Text style={{ color: brandColor }}>Current page: {currentPage}</Text>
+      <Text style={{ color: brandColor }}>{displayText}</Text>
     </Pressable>
   );
 }
