@@ -56,11 +56,7 @@ class PageTimes {
 }
 
 function PageCounter(props) {
-  const {
-    initialPage = 1,
-    pageBuffer = 7,
-    extraTime = 30000,
-  } = props;
+  const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   const now = new Date();
 
   const [isActive, setActive] = useState(false);
@@ -80,7 +76,9 @@ function PageCounter(props) {
     setPageTimes(pageTimes);
   };
 
-  const displayText = isActive ? `Current page: ${currentPage}` : 'Press anywhere to start';
+  const displayText = isActive
+    ? `Current page: ${currentPage}`
+    : 'Press anywhere to start';
 
   // loads a sound file when component mounts and holds in memory until unmount
   // TODO: check if this is better or worse than loading each time / as needed
