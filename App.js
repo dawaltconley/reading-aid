@@ -57,39 +57,47 @@ class PageTimes {
 
 class PauseableTimer {
   #timeLeft;
+  #paused;
+  #startedAt;
 
   constructor(callback, initialTime) {
     this.totalTime = initialTime;
     this.#timeLeft = initialTime;
-    this.callback = () => {
-      this.paused = true;
-      this.#timeLeft = 0;
-      callback();
-    };
-    this.paused = true;
+    this.callback = callback;
+    this.#paused = true;
 
     this.start = this.start.bind(this);
     this.pause = this.pause.bind(this);
   }
 
+  get paused() {
+    return this.#paused;
+  }
+
   get timeLeft() {
-    if (this.paused || !this.startedAt) {
+    if (this.#paused || !this.#startedAt) {
       return this.#timeLeft;
     }
-    const timeRunning = new Date() - this.startedAt;
+    const timeRunning = new Date() - this.#startedAt;
     return this.#timeLeft - timeRunning;
   }
 
   start() {
-    this.paused = false;
-    this.startedAt = new Date();
-    this.timeout = setTimeout(this.callback, this.timeLeft);
+    this.#paused = false;
+    this.#startedAt = new Date();
+    this.timeout = setTimeout(this.#done.bind(this), this.timeLeft);
   }
 
   pause() {
     this.#timeLeft = this.timeLeft;
-    this.paused = true;
+    this.#paused = true;
     clearTimeout(this.timeout);
+  }
+
+  #done() {
+    this.#paused = true;
+    this.#timeLeft = 0;
+    this.callback();
   }
 }
 
