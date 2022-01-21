@@ -60,7 +60,7 @@ class PauseableTimer {
   #paused;
   #startedAt;
 
-  constructor(callback, initialTime) {
+  constructor(initialTime, callback) {
     this.totalTime = initialTime;
     this.#timeLeft = initialTime;
     this.callback = callback;
@@ -97,7 +97,7 @@ class PauseableTimer {
   #done() {
     this.#paused = true;
     this.#timeLeft = 0;
-    this.callback();
+    if (this.callback) this.callback();
   }
 }
 
