@@ -55,6 +55,44 @@ class PageTimes {
   }
 }
 
+class PauseableTimer {
+  #timeLeft;
+
+  constructor(callback, initialTime) {
+    this.totalTime = initialTime;
+    this.#timeLeft = initialTime;
+    this.callback = () => {
+      this.paused = true;
+      this.#timeLeft = 0;
+      callback();
+    };
+    this.paused = true;
+
+    this.start = this.start.bind(this);
+    this.pause = this.pause.bind(this);
+  }
+
+  get timeLeft() {
+    if (this.paused || !this.startedAt) {
+      return this.#timeLeft;
+    }
+    const timeRunning = new Date() - this.startedAt;
+    return this.#timeLeft - timeRunning;
+  }
+
+  start() {
+    this.paused = false;
+    this.startedAt = new Date();
+    this.timeout = setTimeout(this.callback, this.timeLeft);
+  }
+
+  pause() {
+    this.#timeLeft = this.timeLeft;
+    this.paused = true;
+    clearTimeout(this.timeout);
+  }
+}
+
 function PageCounter(props) {
   const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   const now = new Date();
