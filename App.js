@@ -152,7 +152,7 @@ function PageCounter(props) {
       ...current,
       active: false,
       pausedAt: now,
-      timeLeft: current.timeLeft - now - current.startedAt,
+      timeLeft: current.timeLeft - (now - current.startedAt),
     }));
   };
 
