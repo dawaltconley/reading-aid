@@ -102,7 +102,7 @@ class PauseableTimer {
 }
 
 function PageCounter(props) {
-  const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
+  const { initialPage = 1, pageBuffer = 7, extraTime = 0 } = props;
   const now = new Date();
   console.log('updated!');
 
@@ -113,15 +113,18 @@ function PageCounter(props) {
 
   const pageTimes = useRef(new PageTimes([], pageBuffer));
   const pageTimer = useRef(new PauseableTimer(0));
+  console.log('buffer ', pageTimes.current.buffer);
+  console.log('median ', pageTimes.current.median);
 
   const pageTurn = () => {
     if (isActive) {
+      let timeSpent = pageTimer.current.totalTime - pageTimer.current.timeLeft;
       pageTimes.current.add(now - pageStart);
       setPage(currentPage + 1);
+      setPageStart(now);
     } else {
       unpause();
     }
-    setPageStart(now);
   };
 
   const pause = () => {
@@ -171,10 +174,10 @@ function PageCounter(props) {
   }, [isActive, overTimeSound, currentPage]);
 
   useEffect(() => {
-    const checkInterval = setInterval(
-      () => console.log(`time left: ${pageTimer.current.timeLeft}`),
-      1000
-    );
+    const checkInterval = setInterval(() => {
+      console.log(`time left: ${pageTimer.current.timeLeft}`);
+      console.log(`page start: ${pageStart}`);
+    }, 1000);
     return () => clearInterval(checkInterval);
   }, []);
 
