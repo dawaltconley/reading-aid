@@ -109,20 +109,19 @@ function PageCounter(props) {
   const [isActive, setActive] = useState(false);
   const [pageStart, setPageStart] = useState(new Date());
   const [currentPage, setPage] = useState(initialPage);
-  const [pageTimes, setPageTimes] = useState(new PageTimes([], pageBuffer));
   const [overTimeSound, setOverTimeSound] = useState(null);
 
+  const pageTimes = useRef(new PageTimes([], pageBuffer));
   const pageTimer = useRef(new PauseableTimer(0));
 
   const pageTurn = () => {
     if (isActive) {
-      pageTimes.add(now - pageStart);
+      pageTimes.current.add(now - pageStart);
       setPage(currentPage + 1);
     } else {
       unpause();
     }
     setPageStart(now);
-    setPageTimes(pageTimes);
   };
 
   const pause = () => {
@@ -154,12 +153,12 @@ function PageCounter(props) {
 
   // play sound after timer
   useEffect(() => {
-    const timeAllowed = pageTimes.buffer.length && pageTimes.median + extraTime;
     if (
       pageTimer.current.page !== currentPage &&
-      timeAllowed &&
+      pageTimes.current.buffer &&
       overTimeSound
     ) {
+      const timeAllowed = pageTimes.current.median + extraTime;
       pageTimer.current = new PauseableTimer(timeAllowed, () => {
         overTimeSound.replayAsync();
       });
@@ -169,7 +168,7 @@ function PageCounter(props) {
       pageTimer.current.start();
     }
     return () => pageTimer.current.pause();
-  }, [isActive, overTimeSound, currentPage, pageTimes]);
+  }, [isActive, overTimeSound, currentPage]);
 
   useEffect(() => {
     const checkInterval = setInterval(
