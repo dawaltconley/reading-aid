@@ -102,7 +102,7 @@ class PauseableTimer {
 }
 
 function PageCounter(props) {
-  const { initialPage = 1, pageBuffer = 7, extraTime = 0 } = props;
+  const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   console.log('updated!');
 
 
