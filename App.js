@@ -104,6 +104,7 @@ class PauseableTimer {
 function PageCounter(props) {
   const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   const now = new Date();
+  console.log('updated!');
 
   const [isActive, setActive] = useState(false);
   const [pageStart, setPageStart] = useState(new Date());
@@ -126,10 +127,12 @@ function PageCounter(props) {
 
   const pause = () => {
     setActive(false);
+    console.log('paused');
   };
 
   const unpause = () => {
     setActive(true);
+    console.log('unpaused');
   };
 
   const displayText = isActive
@@ -167,6 +170,14 @@ function PageCounter(props) {
     }
     return () => pageTimer.current.pause();
   }, [isActive, overTimeSound, currentPage, pageTimes]);
+
+  useEffect(() => {
+    const checkInterval = setInterval(
+      () => console.log(`time left: ${pageTimer.current.timeLeft}`),
+      1000
+    );
+    return () => clearInterval(checkInterval);
+  }, []);
 
   return (
     <Pressable
