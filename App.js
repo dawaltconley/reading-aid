@@ -107,7 +107,7 @@ function PageCounter(props) {
   console.log('updated!');
 
   const [isActive, setActive] = useState(false);
-  const [pageStart, setPageStart] = useState(new Date());
+  const [pageStart, setPageStart] = useState(now);
   const [currentPage, setPage] = useState(initialPage);
   const [overTimeSound, setOverTimeSound] = useState(null);
 
