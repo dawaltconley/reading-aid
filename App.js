@@ -103,41 +103,72 @@ class PauseableTimer {
 
 function PageCounter(props) {
   const { initialPage = 1, pageBuffer = 7, extraTime = 0 } = props;
-  const now = new Date();
   console.log('updated!');
 
-  const [isActive, setActive] = useState(false);
-  const [pageStart, setPageStart] = useState(now);
-  const [currentPage, setPage] = useState(initialPage);
+
+  const [timer, setTimer] = useState({
+    active: false,
+    timePaused: 0,
+  });
+
+  const [pageTimes, setPageTimes] = useState(new PageTimes([], pageBuffer));
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [overTimeSound, setOverTimeSound] = useState(null);
 
-  const pageTimes = useRef(new PageTimes([], pageBuffer));
-  const pageTimer = useRef(new PauseableTimer(0));
-  console.log('buffer ', pageTimes.current.buffer);
-  console.log('median ', pageTimes.current.median);
-
   const pageTurn = () => {
-    if (isActive) {
-      let timeSpent = pageTimer.current.totalTime - pageTimer.current.timeLeft;
-      pageTimes.current.add(now - pageStart);
-      setPage(currentPage + 1);
-      setPageStart(now);
+    const now = new Date();
+    if (timer.active) {
+      const timeSpentReading = now - timer.pageStart - timer.timePaused;
+      console.log({ timeSpentReading });
+      pageTimes.add(timeSpentReading);
+      console.log({ pageTimes });
+      const nextPageTime = pageTimes.median + extraTime;
+      setTimer(current => ({
+        ...current,
+        pageStart: now,
+        startedAt: now,
+        timePaused: 0,
+        timeAllowed: nextPageTime,
+        timeLeft: nextPageTime,
+      }));
+      setCurrentPage(currentPage + 1);
+      setPageTimes(pageTimes);
     } else {
+      if (currentPage === initialPage)
+        setTimer(timer => ({ ...timer, pageStart: now, startedAt: now }));
       unpause();
     }
   };
 
+  const getTimeLeft = () => {
+    if (!timer.active) return timer.timeLeft;
+    const timeRunning = new Date() - timer.startedAt;
+    return timer.timeLeft - timeRunning;
+  };
+
   const pause = () => {
-    setActive(false);
-    console.log('paused');
+    const now = new Date();
+    setTimer(current => ({
+      ...current,
+      active: false,
+      pausedAt: now,
+      timeLeft: current.timeLeft - now - current.startedAt,
+    }));
   };
 
   const unpause = () => {
-    setActive(true);
-    console.log('unpaused');
+    const now = new Date();
+    setTimer(current => ({
+      ...current,
+      active: true,
+      startedAt: now,
+      timePaused: current.pausedAt
+        ? current.timePaused + (now - current.pausedAt)
+        : 0,
+    }));
   };
 
-  const displayText = isActive
+  const displayText = timer.active
     ? `Current page: ${currentPage}`
     : 'Press anywhere to start';
 
@@ -156,30 +187,22 @@ function PageCounter(props) {
 
   // play sound after timer
   useEffect(() => {
-    if (
-      pageTimer.current.page !== currentPage &&
-      pageTimes.current.buffer &&
-      overTimeSound
-    ) {
-      const timeAllowed = pageTimes.current.median + extraTime;
-      pageTimer.current = new PauseableTimer(timeAllowed, () => {
+    const timeLeft = getTimeLeft();
+    if (timer.active && timeLeft > 0 && overTimeSound) {
+      const playSound = setTimeout(() => {
         overTimeSound.replayAsync();
-      });
-      pageTimer.current.page = currentPage;
+      }, timeLeft);
+
+      return () => clearTimeout(playSound);
     }
-    if (isActive && pageTimer.current.paused) {
-      pageTimer.current.start();
-    }
-    return () => pageTimer.current.pause();
-  }, [isActive, overTimeSound, currentPage]);
+  }, [timer, overTimeSound]);
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
-      console.log(`time left: ${pageTimer.current.timeLeft}`);
-      console.log(`page start: ${pageStart}`);
+      console.log('time left: ', getTimeLeft());
     }, 1000);
     return () => clearInterval(checkInterval);
-  }, []);
+  }, [timer]);
 
   return (
     <Pressable
