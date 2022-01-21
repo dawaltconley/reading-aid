@@ -1,6 +1,6 @@
 import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
 // const brandColor = 'hsl(180, 90%, 67%)';
@@ -111,15 +111,25 @@ function PageCounter(props) {
   const [pageTimes, setPageTimes] = useState(new PageTimes([], pageBuffer));
   const [overTimeSound, setOverTimeSound] = useState(null);
 
+  const pageTimer = useRef(new PauseableTimer(0));
+
   const pageTurn = () => {
     if (isActive) {
       pageTimes.add(now - pageStart);
       setPage(currentPage + 1);
     } else {
-      setActive(true);
+      unpause();
     }
     setPageStart(now);
     setPageTimes(pageTimes);
+  };
+
+  const pause = () => {
+    setActive(false);
+  };
+
+  const unpause = () => {
+    setActive(true);
   };
 
   const displayText = isActive
@@ -142,18 +152,21 @@ function PageCounter(props) {
   // play sound after timer
   useEffect(() => {
     const timeAllowed = pageTimes.buffer.length && pageTimes.median + extraTime;
-    if (timeAllowed && overTimeSound) {
-      const timeAlready = now - pageStart;
-      const timeLeft = timeAllowed - timeAlready;
-
-      const timer = setTimeout(() => overTimeSound.replayAsync(), timeLeft);
-
-      // cleanup
-      return () => {
-        clearTimeout(timer);
-      };
+    if (
+      pageTimer.current.page !== currentPage &&
+      timeAllowed &&
+      overTimeSound
+    ) {
+      pageTimer.current = new PauseableTimer(timeAllowed, () => {
+        overTimeSound.replayAsync();
+      });
+      pageTimer.current.page = currentPage;
     }
-  }, [overTimeSound, pageTimes, pageStart, extraTime]);
+    if (isActive && pageTimer.current.paused) {
+      pageTimer.current.start();
+    }
+    return () => pageTimer.current.pause();
+  }, [isActive, overTimeSound, currentPage, pageTimes]);
 
   return (
     <Pressable
@@ -163,6 +176,7 @@ function PageCounter(props) {
         foreground: true,
       }}
       onPress={pageTurn}
+      onLongPress={pause}
     >
       <Text style={{ color: brandColor }}>{displayText}</Text>
     </Pressable>
