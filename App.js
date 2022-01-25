@@ -25,34 +25,41 @@ const styles = StyleSheet.create({
   },
 });
 
-class PageTimes {
-  constructor(array, maxBufferLength) {
-    this.buffer = array.slice(0, maxBufferLength);
-    this.maxBufferLength = maxBufferLength;
-  }
+function usePageTimes(maxBufferLength, initBuffer = []) {
+  const [buffer, setBuffer] = useState(initBuffer);
+  const [maxPages, setMaxPages] = useState(maxBufferLength);
 
-  get sorted() {
-    return [...this.buffer].sort((a, b) => a - b);
-  }
+  const add = newTime => {
+    buffer.push(newTime);
+    setBuffer(buffer);
+  };
 
-  get median() {
-    const sorted = this.sorted;
-    const middle = (sorted.length - 1) / 2;
-    if (Number.isInteger(middle)) {
-      return sorted[middle];
-    } else {
-      const low = Math.floor(middle),
-        high = Math.ceil(middle);
-      return (sorted[low] + sorted[high]) / 2;
-    }
-  }
-
-  add(newTime) {
-    this.buffer.push(newTime);
-    if (this.buffer.length > this.maxBufferLength) {
-      this.buffer.shift();
-    }
-  }
+  return {
+    buffer,
+    add,
+    set maxPages(n) {
+      setMaxPages(n);
+    },
+    get maxPages() {
+      return maxPages;
+    },
+    get sorted() {
+      const recent = maxPages ? buffer.slice(maxPages * -1) : [...buffer];
+      return recent.sort((a, b) => a - b);
+    },
+    get median() {
+      // const sorted = getSorted(maxPages);
+      const sorted = this.sorted;
+      const middle = (sorted.length - 1) / 2;
+      if (Number.isInteger(middle)) {
+        return sorted[middle];
+      } else {
+        const low = Math.floor(middle),
+          high = Math.ceil(middle);
+        return (sorted[low] + sorted[high]) / 2;
+      }
+    },
+  };
 }
 
 function usePauseableTimer(initialTime = 0, cb = null) {
@@ -119,7 +126,7 @@ function PageCounter(props) {
   const timer = usePauseableTimer();
   const [pageStart, setPageStart] = useState(null);
 
-  const [pageTimes, setPageTimes] = useState(new PageTimes([], pageBuffer));
+  const pageTimes = usePageTimes(pageBuffer);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [overTimeSound, setOverTimeSound] = useState(null);
 
@@ -133,7 +140,6 @@ function PageCounter(props) {
       timer.start();
       setPageStart(now);
       setCurrentPage(currentPage + 1);
-      setPageTimes(pageTimes);
     } else {
       if (currentPage === initialPage) {
         setPageStart(now);
