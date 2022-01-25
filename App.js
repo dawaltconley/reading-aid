@@ -104,14 +104,69 @@ class PauseableTimer {
   }
 }
 
+function usePauseableTimer(initialTime = 0, cb = null) {
+  const [timeLeft, setTimeLeft] = useState(initialTime);
+  const [callback, setCallback] = useState(cb);
+  const [timePaused, setTimePaused] = useState(0);
+  const [startedAt, setStartedAt] = useState(null);
+  const [pausedAt, setPausedAt] = useState(null);
+  const [paused, setPaused] = useState(true);
+
+  useEffect(() => {
+    if (callback && timeLeft > 0) {
+      const timeLeft = getTimeLeft();
+      const timer = setTimeout(callback, timeLeft);
+      return () => clearTimeout(timer);
+    }
+  }, [callback, timeLeft, paused, startedAt]);
+
+  const getTimeLeft = () => {
+    if (paused) return timeLeft;
+    const timeRunning = new Date() - startedAt;
+    return timeLeft - timeRunning;
+  };
+
+  const start = () => {
+    const now = new Date();
+    const timeJustPaused = pausedAt ? now - pausedAt : 0;
+    setTimePaused(t => t + timeJustPaused);
+    setPaused(false);
+    setStartedAt(now);
+  };
+
+  const pause = () => {
+    const now = new Date();
+    setTimeLeft(getTimeLeft());
+    setPaused(true);
+    setPausedAt(now);
+  };
+
+  const reset = (newTime = 0) => {
+    setTimeLeft(newTime);
+    setPaused(true);
+    setTimePaused(0);
+    setPausedAt(null);
+  };
+
+  return {
+    start,
+    reset,
+    pause,
+    paused,
+    active: !paused,
+    callback,
+    setCallback,
+    getTimeLeft,
+    timePaused,
+  };
+}
+
 function PageCounter(props) {
   const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   console.log('updated!');
 
-  const [timer, setTimer] = useState({
-    active: false,
-    timePaused: 0,
-  });
+  const timer = usePauseableTimer();
+  const [pageStart, setPageStart] = useState(null);
 
   const [pageTimes, setPageTimes] = useState(new PageTimes([], pageBuffer));
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -120,54 +175,20 @@ function PageCounter(props) {
   const pageTurn = () => {
     const now = new Date();
     if (timer.active) {
-      const timeSpentReading = now - timer.pageStart - timer.timePaused;
-      console.log({ timeSpentReading });
+      const timeSpentReading = now - pageStart - timer.timePaused;
       pageTimes.add(timeSpentReading);
-      console.log({ pageTimes });
-      const nextPageTime = pageTimes.median + extraTime;
-      setTimer(current => ({
-        ...current,
-        pageStart: now,
-        startedAt: now,
-        timePaused: 0,
-        timeAllowed: nextPageTime,
-        timeLeft: nextPageTime,
-      }));
+      const nextPageTime = Math.ceil(pageTimes.median + extraTime);
+      timer.reset(nextPageTime);
+      timer.start();
+      setPageStart(now);
       setCurrentPage(currentPage + 1);
       setPageTimes(pageTimes);
     } else {
-      if (currentPage === initialPage)
-        setTimer(timer => ({ ...timer, pageStart: now, startedAt: now }));
-      unpause();
+      if (currentPage === initialPage) {
+        setPageStart(now);
+      }
+      timer.start();
     }
-  };
-
-  const getTimeLeft = () => {
-    if (!timer.active) return timer.timeLeft;
-    const timeRunning = new Date() - timer.startedAt;
-    return timer.timeLeft - timeRunning;
-  };
-
-  const pause = () => {
-    const now = new Date();
-    setTimer(current => ({
-      ...current,
-      active: false,
-      pausedAt: now,
-      timeLeft: current.timeLeft - (now - current.startedAt),
-    }));
-  };
-
-  const unpause = () => {
-    const now = new Date();
-    setTimer(current => ({
-      ...current,
-      active: true,
-      startedAt: now,
-      timePaused: current.pausedAt
-        ? current.timePaused + (now - current.pausedAt)
-        : 0,
-    }));
   };
 
   const displayText = timer.active
@@ -177,31 +198,25 @@ function PageCounter(props) {
   // loads a sound file when component mounts and holds in memory until unmount
   // TODO: check if this is better or worse than loading each time / as needed
   useEffect(() => {
-    // load sound
-    Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) =>
-      setOverTimeSound(sound)
-    );
+    // load sound and set to timer callback
+    console.log('loading sound');
+    Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) => {
+      setOverTimeSound(sound);
+      const playSound = () => {
+        sound.replayAsync();
+      };
+      timer.setCallback(() => playSound); // need to return from a function in order to pass a function... TODO: this seems like an anti-pattern
+    });
     // cleanup
-    if (overTimeSound) {
-      return overTimeSound.unloadAsync.bind(overTimeSound);
-    }
+    return () => {
+      if (overTimeSound) overTimeSound.unloadAsync();
+      if (timer.callback) timer.setCallback(null);
+    };
   }, []);
-
-  // play sound after timer
-  useEffect(() => {
-    const timeLeft = getTimeLeft();
-    if (timer.active && timeLeft > 0 && overTimeSound) {
-      const playSound = setTimeout(() => {
-        overTimeSound.replayAsync();
-      }, timeLeft);
-
-      return () => clearTimeout(playSound);
-    }
-  }, [timer, overTimeSound]);
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
-      console.log('time left: ', getTimeLeft());
+      console.log('time left: ', timer.getTimeLeft());
     }, 1000);
     return () => clearInterval(checkInterval);
   }, [timer]);
@@ -214,7 +229,7 @@ function PageCounter(props) {
         foreground: true,
       }}
       onPress={pageTurn}
-      onLongPress={pause}
+      onLongPress={timer.pause}
     >
       <Text style={{ color: brandColor }}>{displayText}</Text>
     </Pressable>
