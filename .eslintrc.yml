@@ -1,7 +1,8 @@
 plugins:
   - react
 extends:
-  - universe/native
+  - 'universe/native'
+  - 'eslint:recommended'
 parserOptions:
   ecmaFeatures:
     jsx: true
