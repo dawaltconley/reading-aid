@@ -57,8 +57,10 @@ class PageTimes {
 
 class PauseableTimer {
   #timeLeft;
+  #timePaused;
   #paused;
   #startedAt;
+  #pausedAt;
 
   constructor(initialTime, callback) {
     this.totalTime = initialTime;
@@ -83,6 +85,7 @@ class PauseableTimer {
   }
 
   start() {
+    this.#timePaused =+ this.timePaused; // unset
     this.#paused = false;
     this.#startedAt = new Date();
     this.timeout = setTimeout(this.#done.bind(this), this.timeLeft);
