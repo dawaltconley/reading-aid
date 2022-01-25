@@ -64,7 +64,7 @@ function usePageTimes(maxBufferLength, initBuffer = []) {
 
 function usePauseableTimer(initialTime = 0, cb = null) {
   const [timeLeft, setTimeLeft] = useState(initialTime);
-  const [callback, setCallback] = useState(cb);
+  const [callback, setCallback] = useState(() => cb);
   const [timePaused, setTimePaused] = useState(0);
   const [startedAt, setStartedAt] = useState(null);
   const [pausedAt, setPausedAt] = useState(null);
@@ -112,9 +112,15 @@ function usePauseableTimer(initialTime = 0, cb = null) {
     pause,
     paused,
     active: !paused,
-    callback,
-    setCallback,
-    getTimeLeft,
+    get callback() {
+      return callback;
+    },
+    set callback(cb) {
+      setCallback(() => cb);
+    },
+    get timeLeft() {
+      return getTimeLeft();
+    },
     timePaused,
   };
 }
@@ -159,21 +165,18 @@ function PageCounter(props) {
     console.log('loading sound');
     Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) => {
       setOverTimeSound(sound);
-      const playSound = () => {
-        sound.replayAsync();
-      };
-      timer.setCallback(() => playSound); // need to return from a function in order to pass a function... TODO: this seems like an anti-pattern
+      timer.callback = () => sound.replayAsync();
     });
     // cleanup
     return () => {
       if (overTimeSound) overTimeSound.unloadAsync();
-      if (timer.callback) timer.setCallback(null);
+      if (timer.callback) timer.callback = null;
     };
   }, []);
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
-      console.log('time left: ', timer.getTimeLeft());
+      console.log('time left: ', timer.timeLeft);
     }, 1000);
     return () => clearInterval(checkInterval);
   }, [timer]);
