@@ -24,10 +24,16 @@ const playBell = () => {
   return bell.play();
 };
 
+/**
+ * Hook for the time it took to read pages so far.
+ * @param  maxBufferLength - the maximum number of pages to consider when calculating the mean page time.
+ * @param initBuffer - the initial record of page times.
+ */
 function usePageTimes(maxBufferLength: number, initBuffer: number[] = []) {
   const [buffer, setBuffer] = useState(initBuffer);
   const [maxPages, setMaxPages] = useState(maxBufferLength);
 
+  /** Add a new page time to the buffer. */
   const add = (newTime: number) => {
     buffer.push(newTime);
     setBuffer(buffer);
@@ -61,6 +67,11 @@ function usePageTimes(maxBufferLength: number, initBuffer: number[] = []) {
   };
 }
 
+/**
+ * Hook implementing a pausible timer that runs a callback when finished.
+ * @param initialTime - initial time on the clock.
+ * @param cb - Callback executed when time runs out.
+ */
 function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [callback, setCallback] = useState(() => cb);
@@ -101,7 +112,10 @@ function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
     setPausedAt(Date.now());
   }, [getTimeLeft]);
 
-  /** Reset the timer. */
+  /**
+   * Reset the timer.
+   * @param newTime - time on the clock when reset.
+   */
   const reset = useCallback((newTime = 0) => {
     setTimeLeft(newTime);
     setPaused(true);
