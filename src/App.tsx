@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   // Box,
   Container,
-  // Stack,
+  Stack,
   Typography,
-  Button,
-  ButtonGroup,
+  // Button,
+  IconButton,
+  // ButtonGroup,
 } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -197,17 +198,23 @@ function PageCounter(props: {
       }}
     >
       <Typography>{displayText}</Typography>
-      <ButtonGroup variant="text" size="large">
-        <Button onClick={() => console.log('not yet implemented!')}>
+      <Stack direction="row">
+        <IconButton
+          aria-label="previous page"
+          onClick={() => console.log('not yet implemented!')}
+        >
           <FontAwesomeIcon icon={faBackwardStep} />
-        </Button>
-        <Button onClick={timer.toggle}>
+        </IconButton>
+        <IconButton
+          aria-label={timer.paused ? 'play' : 'pause'}
+          onClick={timer.toggle}
+        >
           <FontAwesomeIcon icon={timer.paused ? faPlay : faPause} />
-        </Button>
-        <Button onClick={pageTurn}>
+        </IconButton>
+        <IconButton aria-label="next page" onClick={pageTurn}>
           <FontAwesomeIcon icon={faForwardStep} />
-        </Button>
-      </ButtonGroup>
+        </IconButton>
+      </Stack>
     </Container>
   );
 }
