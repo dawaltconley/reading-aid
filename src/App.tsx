@@ -131,12 +131,11 @@ function PageCounter(props: {
   const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   console.log('updated!');
 
-  const timer = usePauseableTimer();
+  const timer = usePauseableTimer(0, playBell);
   const [pageStart, setPageStart] = useState(Date.now());
 
   const pageTimes = usePageTimes(pageBuffer);
   const [currentPage, setCurrentPage] = useState(initialPage);
-  // const [overTimeSound, setOverTimeSound] = useState(null);
 
   const pageTurn = () => {
     const now = Date.now();
@@ -151,7 +150,6 @@ function PageCounter(props: {
     } else {
       if (currentPage === initialPage) {
         setPageStart(now);
-        timer.callback = playBell;
       }
       timer.start();
     }
