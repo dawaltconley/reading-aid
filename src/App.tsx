@@ -59,7 +59,7 @@ function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
 
   const getTimeLeft = () => {
     if (paused) return timeLeft;
-    const timeRunning = startedAt ? (Date.now() - startedAt) : 0;
+    const timeRunning = startedAt ? Date.now() - startedAt : 0;
     return timeLeft - timeRunning;
   };
 
@@ -103,7 +103,11 @@ function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   };
 }
 
-function PageCounter(props: { initialPage?: number, pageBuffer?: number, extraTime?: number }) {
+function PageCounter(props: {
+  initialPage?: number;
+  pageBuffer?: number;
+  extraTime?: number;
+}) {
   const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   console.log('updated!');
 
@@ -160,7 +164,7 @@ function PageCounter(props: { initialPage?: number, pageBuffer?: number, extraTi
   }, [timer]);
 
   return (
-    <div className='App-header' onClick={pageTurn} onDoubleClick={timer.pause}>
+    <div className="App-header" onClick={pageTurn} onDoubleClick={timer.pause}>
       <p style={{ color: brandColor }}>{displayText}</p>
     </div>
   );
