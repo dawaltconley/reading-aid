@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import {
+  // Box,
+  Container,
+  // Stack,
+  Typography,
+  Button,
+  ButtonGroup,
+} from '@mui/material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faPlay,
+  faPause,
+  faForwardStep,
+  faBackwardStep,
+} from '@fortawesome/pro-solid-svg-icons';
+
 import bellSound from './assets/bell.mp3';
 import './App.css';
-
-const brandColor = 'hsl(268, 100%, 46%)';
 
 const bell = new Audio(bellSound);
 const playBell = () => {
@@ -155,9 +169,28 @@ function PageCounter(props: {
   }, [timer]);
 
   return (
-    <div className="App-header" onClick={pageTurn} onDoubleClick={timer.pause}>
-      <p style={{ color: brandColor }}>{displayText}</p>
-    </div>
+    <Container
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+      }}
+    >
+      <Typography>{displayText}</Typography>
+      <ButtonGroup variant="text" size="large">
+        <Button onClick={() => console.log('not yet implemented!')}>
+          <FontAwesomeIcon icon={faBackwardStep} />
+        </Button>
+        <Button onClick={timer.paused ? timer.start : timer.pause}>
+          <FontAwesomeIcon icon={timer.paused ? faPlay : faPause} />
+        </Button>
+        <Button onClick={pageTurn}>
+          <FontAwesomeIcon icon={faForwardStep} />
+        </Button>
+      </ButtonGroup>
+    </Container>
   );
 }
 
