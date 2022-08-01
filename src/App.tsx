@@ -1,35 +1,14 @@
-import { Audio } from 'expo-av';
-import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import logo from './logo.svg';
+import './App.css';
 
-// const brandColor = 'hsl(180, 90%, 67%)';
 const brandColor = 'hsl(268, 100%, 46%)';
 
-const timeUpSoundFile = require('./assets/bell.mp3');
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  touchScreen: {
-    flex: 1,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: '100%',
-  },
-});
-
-function usePageTimes(maxBufferLength, initBuffer = []) {
+function usePageTimes(maxBufferLength: number, initBuffer: number[] = []) {
   const [buffer, setBuffer] = useState(initBuffer);
   const [maxPages, setMaxPages] = useState(maxBufferLength);
 
-  const add = newTime => {
+  const add = (newTime: number) => {
     buffer.push(newTime);
     setBuffer(buffer);
   };
@@ -62,12 +41,12 @@ function usePageTimes(maxBufferLength, initBuffer = []) {
   };
 }
 
-function usePauseableTimer(initialTime = 0, cb = null) {
+function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [callback, setCallback] = useState(() => cb);
   const [timePaused, setTimePaused] = useState(0);
-  const [startedAt, setStartedAt] = useState(null);
-  const [pausedAt, setPausedAt] = useState(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [paused, setPaused] = useState(true);
 
   useEffect(() => {
@@ -80,12 +59,12 @@ function usePauseableTimer(initialTime = 0, cb = null) {
 
   const getTimeLeft = () => {
     if (paused) return timeLeft;
-    const timeRunning = new Date() - startedAt;
+    const timeRunning = startedAt ? (Date.now() - startedAt) : 0;
     return timeLeft - timeRunning;
   };
 
   const start = () => {
-    const now = new Date();
+    const now = Date.now();
     const timeJustPaused = pausedAt ? now - pausedAt : 0;
     setTimePaused(t => t + timeJustPaused);
     setPaused(false);
@@ -93,10 +72,9 @@ function usePauseableTimer(initialTime = 0, cb = null) {
   };
 
   const pause = () => {
-    const now = new Date();
     setTimeLeft(getTimeLeft());
     setPaused(true);
-    setPausedAt(now);
+    setPausedAt(Date.now());
   };
 
   const reset = (newTime = 0) => {
@@ -125,19 +103,19 @@ function usePauseableTimer(initialTime = 0, cb = null) {
   };
 }
 
-function PageCounter(props) {
+function PageCounter(props: { initialPage?: number, pageBuffer?: number, extraTime?: number }) {
   const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
   console.log('updated!');
 
   const timer = usePauseableTimer();
-  const [pageStart, setPageStart] = useState(null);
+  const [pageStart, setPageStart] = useState(Date.now());
 
   const pageTimes = usePageTimes(pageBuffer);
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const [overTimeSound, setOverTimeSound] = useState(null);
+  // const [overTimeSound, setOverTimeSound] = useState(null);
 
   const pageTurn = () => {
-    const now = new Date();
+    const now = Date.now();
     if (timer.active) {
       const timeSpentReading = now - pageStart - timer.timePaused;
       pageTimes.add(timeSpentReading);
@@ -158,21 +136,21 @@ function PageCounter(props) {
     ? `Current page: ${currentPage}`
     : 'Press anywhere to start';
 
-  // loads a sound file when component mounts and holds in memory until unmount
-  // TODO: check if this is better or worse than loading each time / as needed
-  useEffect(() => {
-    // load sound and set to timer callback
-    console.log('loading sound');
-    Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) => {
-      setOverTimeSound(sound);
-      timer.callback = () => sound.replayAsync();
-    });
-    // cleanup
-    return () => {
-      if (overTimeSound) overTimeSound.unloadAsync();
-      if (timer.callback) timer.callback = null;
-    };
-  }, []);
+  // // loads a sound file when component mounts and holds in memory until unmount
+  // // TODO: check if this is better or worse than loading each time / as needed
+  // useEffect(() => {
+  //   // load sound and set to timer callback
+  //   console.log('loading sound');
+  //   Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) => {
+  //     setOverTimeSound(sound);
+  //     timer.callback = () => sound.replayAsync();
+  //   });
+  //   // cleanup
+  //   return () => {
+  //     if (overTimeSound) overTimeSound.unloadAsync();
+  //     if (timer.callback) timer.callback = null;
+  //   };
+  // }, []);
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
@@ -182,20 +160,18 @@ function PageCounter(props) {
   }, [timer]);
 
   return (
-    <Pressable
-      style={styles.touchScreen}
-      android_ripple={{
-        color: brandColor,
-        foreground: true,
-      }}
-      onPress={pageTurn}
-      onLongPress={timer.pause}
-    >
-      <Text style={{ color: brandColor }}>{displayText}</Text>
-    </Pressable>
+    <div className='App-header' onClick={pageTurn} onDoubleClick={timer.pause}>
+      <p style={{ color: brandColor }}>{displayText}</p>
+    </div>
   );
 }
 
-export default function App() {
-  return <PageCounter />;
+function App() {
+  return (
+    <div className="App">
+      <PageCounter />
+    </div>
+  );
 }
+
+export default App;

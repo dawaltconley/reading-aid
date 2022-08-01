@@ -1,13 +1,14 @@
 plugins:
   - react
 extends:
-  - 'universe/native'
+  - react-app
+  - react-app/jest
   - 'eslint:recommended'
+env:
+  es2022: true
 parserOptions:
   ecmaFeatures:
     jsx: true
-  ecmaVersion: 2018
   sourceType: module
 rules:
   no-unused-vars: warn
-  semi: warn
