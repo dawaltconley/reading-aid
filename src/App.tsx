@@ -70,7 +70,7 @@ function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   const [paused, setPaused] = useState(true);
 
   useEffect(() => {
-    if (callback && timeLeft > 0) {
+    if (!paused && callback && timeLeft > 0) {
       const timeLeft = getTimeLeft();
       const timer = setTimeout(callback, timeLeft);
       return () => clearTimeout(timer);
