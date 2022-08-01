@@ -1,9 +1,11 @@
+root: true
 plugins:
   - react
 extends:
   - react-app
   - react-app/jest
   - 'eslint:recommended'
+  - 'prettier'
 env:
   es2022: true
 parserOptions:
@@ -12,3 +14,4 @@ parserOptions:
   sourceType: module
 rules:
   no-unused-vars: warn
+  semi: warn
