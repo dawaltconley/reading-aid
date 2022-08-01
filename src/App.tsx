@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   // Box,
   Container,
@@ -69,40 +69,45 @@ function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [paused, setPaused] = useState(true);
 
+  /** Get the remaining time in milliseconds. */
+  const getTimeLeft = useCallback(() => {
+    if (paused) return timeLeft;
+    const timeRunning = startedAt ? Date.now() - startedAt : 0;
+    return timeLeft - timeRunning;
+  }, [paused, timeLeft, startedAt]);
+
+  /** Updates the callback function that executes when the timer runs out. */
   useEffect(() => {
     if (!paused && callback && timeLeft > 0) {
       const timeLeft = getTimeLeft();
       const timer = setTimeout(callback, timeLeft);
       return () => clearTimeout(timer);
     }
-  }, [callback, timeLeft, paused, startedAt]);
+  }, [callback, timeLeft, getTimeLeft, paused, startedAt]);
 
-  const getTimeLeft = () => {
-    if (paused) return timeLeft;
-    const timeRunning = startedAt ? Date.now() - startedAt : 0;
-    return timeLeft - timeRunning;
-  };
-
-  const start = () => {
+  /** Start the timer. */
+  const start = useCallback(() => {
     const now = Date.now();
     const timeJustPaused = pausedAt ? now - pausedAt : 0;
     setTimePaused(t => t + timeJustPaused);
     setPaused(false);
     setStartedAt(now);
-  };
+  }, [pausedAt]);
 
-  const pause = () => {
+  /** Pause the timer. */
+  const pause = useCallback(() => {
     setTimeLeft(getTimeLeft());
     setPaused(true);
     setPausedAt(Date.now());
-  };
+  }, [getTimeLeft]);
 
-  const reset = (newTime = 0) => {
+  /** Reset the timer. */
+  const reset = useCallback((newTime = 0) => {
     setTimeLeft(newTime);
     setPaused(true);
     setTimePaused(0);
     setPausedAt(null);
-  };
+  }, []);
 
   return {
     start,
