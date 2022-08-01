@@ -113,6 +113,7 @@ function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
     start,
     reset,
     pause,
+    toggle: paused ? start : pause,
     paused,
     active: !paused,
     get callback() {
@@ -186,7 +187,7 @@ function PageCounter(props: {
         <Button onClick={() => console.log('not yet implemented!')}>
           <FontAwesomeIcon icon={faBackwardStep} />
         </Button>
-        <Button onClick={timer.paused ? timer.start : timer.pause}>
+        <Button onClick={timer.toggle}>
           <FontAwesomeIcon icon={timer.paused ? faPlay : faPause} />
         </Button>
         <Button onClick={pageTurn}>
