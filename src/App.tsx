@@ -1,8 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import logo from './logo.svg';
+import React, { useState, useEffect } from 'react';
+import bellSound from './assets/bell.mp3';
 import './App.css';
 
 const brandColor = 'hsl(268, 100%, 46%)';
+
+const bell = new Audio(bellSound);
+const playBell = () => {
+  if (!bell.paused) return (bell.currentTime = 0);
+  return bell.play();
+};
 
 function usePageTimes(maxBufferLength: number, initBuffer: number[] = []) {
   const [buffer, setBuffer] = useState(initBuffer);
@@ -131,6 +137,7 @@ function PageCounter(props: {
     } else {
       if (currentPage === initialPage) {
         setPageStart(now);
+        timer.callback = playBell;
       }
       timer.start();
     }
@@ -139,22 +146,6 @@ function PageCounter(props: {
   const displayText = timer.active
     ? `Current page: ${currentPage}`
     : 'Press anywhere to start';
-
-  // // loads a sound file when component mounts and holds in memory until unmount
-  // // TODO: check if this is better or worse than loading each time / as needed
-  // useEffect(() => {
-  //   // load sound and set to timer callback
-  //   console.log('loading sound');
-  //   Audio.Sound.createAsync(timeUpSoundFile).then(({ sound }) => {
-  //     setOverTimeSound(sound);
-  //     timer.callback = () => sound.replayAsync();
-  //   });
-  //   // cleanup
-  //   return () => {
-  //     if (overTimeSound) overTimeSound.unloadAsync();
-  //     if (timer.callback) timer.callback = null;
-  //   };
-  // }, []);
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
@@ -173,7 +164,7 @@ function PageCounter(props: {
 function App() {
   return (
     <div className="App">
-      <PageCounter />
+      <PageCounter extraTime={0} />
     </div>
   );
 }
