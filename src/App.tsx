@@ -19,6 +19,8 @@ import {
 import bellSound from './assets/bell.mp3';
 import './App.css';
 
+import AppMenu from './AppMenu';
+
 const bell = new Audio(bellSound);
 const playBell = () => {
   if (!bell.paused) return (bell.currentTime = 0);
@@ -197,6 +199,7 @@ function PageCounter(props: {
         minHeight: '100vh',
       }}
     >
+      <AppMenu open={false} />
       <Typography>{displayText}</Typography>
       <Stack direction="row">
         <IconButton
