@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Toolbar,
@@ -74,6 +74,7 @@ function useDatabase(name: string, version: number) {
 interface ReadingHook extends Reading {
   nextPage: Function;
   previousPage: Function;
+  save: Function;
 }
 
 function useReading(
@@ -104,7 +105,7 @@ function useReading(
       const putRequest = objectStore.put(
         {
           title,
-          page: {},
+          pages: { start: startPage, end: endPage },
         },
         getId()
       );
@@ -136,11 +137,34 @@ function useReading(
   };
 
   return {
-    title,
+    get title() {
+      return title;
+    },
+    set title(title) {
+      setTitle(title);
+    },
     pages: {
-      start: startPage,
-      end: endPage,
-      current: currentPage,
+      get start() {
+        return startPage;
+      },
+      set start(n) {
+        setStartPage(n);
+      },
+      get end() {
+        return endPage;
+      },
+      set end(n) {
+        setEndPage(n);
+      },
+      get current() {
+        return currentPage;
+      },
+      set current(n) {
+        setCurrentPage(n);
+      },
+      // start: startPage,
+      // end: endPage,
+      // current: currentPage,
     },
     isSaved,
     isCompleted,
@@ -149,6 +173,7 @@ function useReading(
     },
     nextPage,
     previousPage,
+    save,
   };
 }
 
@@ -165,32 +190,55 @@ const AppReadingsList = ({ readings }: { readings: Reading[] }) => (
   </List>
 );
 
-const ReadingForm = (props: { isOpen: boolean; close: Function }) => {
+const ReadingForm = (props: {
+  isOpen: boolean;
+  close: Function;
+  update: Function;
+}) => {
   // const [reading, setReading] = useState<Reading | undefined>()
 
-  const reading = useReading()
-  
+  const reading = useReading();
+  const [title, setTitle] = useState(reading.title);
+  const [startPage, setStartPage] = useState(reading.pages.start);
+  const [endPage, setEndPage] = useState(reading.pages.end);
+
+  const configureReading = () => {
+    reading.title = title;
+    reading.pages.start = startPage;
+    reading.pages.end = endPage;
+    reading.save();
+  };
+
+  useEffect(() => props.update(true), [reading.isSaved]);
 
   return (
     <Dialog open={props.isOpen} onBackdropClick={() => props.close()}>
       <DialogTitle>New reading</DialogTitle>
       <DialogContent>
-        <TextField id="new-title" label="Title" variant="standard" />
+        <TextField
+          id="new-title"
+          label="Title"
+          variant="standard"
+          onChange={({ target }) => setTitle(target.value)}
+        />
         <TextField
           id="new-page-start"
           label="First page"
           type="number"
           defaultValue={1}
           variant="standard"
+          onChange={({ target }) => setStartPage(Number(target.value))}
         />
         <TextField
           id="new-page-end"
           label="Last page"
           type="number"
           variant="standard"
+          onChange={({ target }) => setEndPage(Number(target.value))}
         />
       </DialogContent>
       <DialogActions>
+        <Button onClick={() => configureReading()}>Submit</Button>
         <Button onClick={() => props.close()}>Cancel</Button>
       </DialogActions>
     </Dialog>
@@ -200,6 +248,7 @@ const ReadingForm = (props: { isOpen: boolean; close: Function }) => {
 function AppReadings() {
   const [savedReadings, setSavedReadings] = useState<Reading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [formIsOpen, setFormIsOpen] = useState(false);
 
   const db = useDatabase('reading_aid', 1);
@@ -213,7 +262,7 @@ function AppReadings() {
       setSavedReadings(request.result);
       setIsLoading(false);
     });
-  }, [db]);
+  }, [db, isLoading]);
 
   const openForm = () => setFormIsOpen(true);
   const closeForm = () => setFormIsOpen(false);
@@ -228,7 +277,11 @@ function AppReadings() {
         <AppReadingsList readings={savedReadings} />
       )}
       <Button onClick={openForm}>New reading</Button>
-      <ReadingForm isOpen={formIsOpen} close={closeForm} />
+      <ReadingForm
+        isOpen={formIsOpen}
+        close={closeForm}
+        update={setIsLoading}
+      />
     </Box>
   );
 }

@@ -20,6 +20,7 @@ import bellSound from './assets/bell.mp3';
 import './App.css';
 
 import AppMenu from './AppMenu';
+import AppReadings from './AppReadings';
 
 const bell = new Audio(bellSound);
 const playBell = () => {
@@ -199,6 +200,19 @@ function PageCounter(props: {
         minHeight: '100vh',
       }}
     >
+      {/*
+      <Button
+        size="large"
+        onClick={}
+        sx={{
+          position: 'fixed',
+          top: '1rem',
+          left: 0,
+        }}
+      >
+        <FontAwesomeIcon icon={faBars} />
+      </Button>
+      */}
       <AppMenu open={false} />
       <Typography>{displayText}</Typography>
       <Stack direction="row">
@@ -225,9 +239,14 @@ function PageCounter(props: {
 function App() {
   return (
     <div className="App">
-      <PageCounter extraTime={0} />
+      <AppReadings />
     </div>
   );
+  // return (
+  //   <div className="App">
+  //     <PageCounter extraTime={0} />
+  //   </div>
+  // );
 }
 
 export default App;
