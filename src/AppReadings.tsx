@@ -23,6 +23,7 @@ import {
   faPenToSquare as iconEdit,
   faTrashCan as iconDelete,
 } from '@fortawesome/pro-solid-svg-icons';
+import _ from 'lodash';
 
 interface Reading {
   readonly id?: string;
@@ -41,33 +42,15 @@ let dbInstance = 0;
 function useDatabase(name: string = 'reading_aid', version: number = 1) {
   const [db, setDb] = useState<IDBDatabase | undefined>();
   const [queued, setQueued] = useState<Function[]>([]);
-  // const [renderCount, setRenderCount] = useState(0)
-  const renderRef = useRef(0);
-  const instance = useRef(dbInstance++);
-  // console.log('total db', instance.current);
 
-  console.log({ db });
+  // const renderRef = useRef(0);
+  // const instance = useRef(dbInstance++);
 
-  const addToQueue = useCallback(
-    (...args: Function[]) => {
-      console.log('adding to queue');
-      let q = [...queued, ...args];
-      console.log('new queue: ', q);
-      setQueued(q);
-    },
-    [queued]
-  );
+  const addToQueue = (...functions: Function[]) =>
+    setQueued([...queued, ...functions]);
 
   useEffect(() => {
-    // renderRef.current++;
-    // console.log('database changed', renderRef.current);
-    // console.log({ db });
-
-    // addToQueue(() => console.log('dummy queue executed'));
-    // console.log('added logger function', instance.current);
-
     if (db) return () => db.close();
-    // if (db) return;
 
     const request = indexedDB.open(name, version);
     const onSuccess = () => setDb(request.result);
@@ -93,8 +76,13 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     request.addEventListener('upgradeneeded', onUpgrade);
   }, [db, name, version]);
 
-  const putReading = (reading: Reading, callback?: (e: Event) => void) => {
-    if (!db) return addToQueue(() => putReading(reading, callback));
+  const putReading = (
+    db: IDBDatabase | undefined,
+    reading: Reading,
+    callback?: (e: Event) => void
+  ) => {
+    if (!db)
+      return addToQueue((db: IDBDatabase) => putReading(db, reading, callback));
     const transaction = db.transaction(['readings'], 'readwrite');
     const objectStore = transaction.objectStore('readings');
     const request = objectStore.put(reading);
@@ -104,8 +92,13 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     // TODO: more event listening...
   };
 
-  const deleteReading = (id: string, callback?: (e: Event) => void) => {
-    if (!db) return addToQueue(() => deleteReading(id, callback));
+  const deleteReading = (
+    db: IDBDatabase | undefined,
+    id: string,
+    callback?: (e: Event) => void
+  ) => {
+    if (!db)
+      return addToQueue((db: IDBDatabase) => deleteReading(db, id, callback));
     const transaction = db.transaction(['readings'], 'readwrite');
     const objectStore = transaction.objectStore('readings');
     const request = objectStore.delete(id);
@@ -114,74 +107,37 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     });
   };
 
-  function getAllReadings(
+  const getAllReadings = (
+    db: IDBDatabase | undefined,
     query: IDBKeyRange | string | null | undefined,
     callback?: (e: Reading[]) => void
-  ): void {
-    // addToQueue(() => console.log('dummy queue executed'));
-    // console.log('added logger function', instance.current);
-    console.log('getting all readings', db);
+  ): void => {
     if (!db)
-      return addToQueue(
-        () => console.log('dummy queue executed'),
-        getAllReadings.bind(null, query, callback)
+      return addToQueue((db: IDBDatabase) =>
+        getAllReadings(db, query, callback)
       );
     const transaction = db.transaction(['readings'], 'readonly');
     const objectStore = transaction.objectStore('readings');
     const request = objectStore.getAll(/* query */); // TODO handle max-events, requery on later requests
-    console.log({ request });
     request.addEventListener('success', () => {
-      console.log('got all readings', request.result);
       if (callback) callback(request.result);
     });
-    request.addEventListener('error', e =>
-      console.error(`Couldn't get readings`, e)
-    );
-  }
-
-  //   },
-  //   [db, addToQueue]
-  // );
-  // const getAllReadings = // useCallback(
-  //   (
-  //     query: IDBKeyRange | string | null | undefined,
-  //     callback?: (e: Reading[]) => void
-  //   ) => {
-  //     // addToQueue(() => console.log('dummy queue executed'));
-  //     // console.log('added logger function', instance.current);
-  //     if (!db)
-  //       return addToQueue(
-  //         () => console.log('dummy queue executed'),
-  //         () => getAllReadings(query, callback)
-  //       );
-  //     const transaction = db.transaction(['readings'], 'readonly');
-  //     const objectStore = transaction.objectStore('readings');
-  //     const request = objectStore.getAll(/* query */); // TODO handle max-events, requery on later requests
-  //     console.log({ request });
-  //     request.addEventListener('success', () => {
-  //       console.log('got all readings', request.result);
-  //       if (callback) callback(request.result);
-  //     });
-  //     request.addEventListener('error', e =>
-  //       console.error(`Couldn't get readings`, e)
-  //     );
-  //   };
-  // //   },
-  // //   [db, addToQueue]
-  // // );
+    // request.addEventListener('error', e =>
+    //   console.error(`Couldn't get readings`, e)
+    // );
+  };
 
   useEffect(() => {
-    console.log({ db, queued });
     if (!db || !queued.length) return;
-    console.log('executing entire queue', instance.current, queued);
-    queued.forEach(q => {
-      console.log('executing...', q);
-      q();
-    });
+    queued.forEach(q => q(db));
     setQueued([]);
   }, [db, queued]);
 
-  return { update: putReading, delete: deleteReading, getAll: getAllReadings };
+  return {
+    update: putReading.bind(null, db),
+    delete: deleteReading.bind(null, db),
+    getAll: getAllReadings.bind(null, db),
+  };
 }
 
 interface ReadingHook extends Reading {
@@ -216,20 +172,54 @@ function useReading(
     [title, startPage, endPage]
   );
 
-  const saveReading = (callback?: (e: Event) => void) =>
-    db.update(
-      {
-        id: getId(), // I may want to do something different here, in order to not create new entries when editing the pages
-        title,
-        pages: { start: startPage, end: endPage, current: currentPage },
-        isSaved: true,
-        isCompleted,
-      },
-      event => {
-        setIsSaved(true);
-        if (callback) callback(event);
-      }
-    );
+  const data: Reading = {
+    get id() {
+      return getId();
+    },
+    title,
+    pages: {
+      start: startPage,
+      end: endPage,
+      current: currentPage,
+    },
+    isSaved,
+    isCompleted,
+  };
+
+  const saveReading = (
+    updates: Partial<Reading>,
+    callback?: (e: Event) => void
+  ) => {
+    const updated: Reading = _.merge(data, updates);
+    db.update({ ..._.merge(data, updates), isSaved: true }, event => {
+      // TODO update state after / during save
+      setIsSaved(true);
+      if (callback) callback(event);
+    });
+  };
+
+  // const getReading = (
+  //   callback?: (e: Event) => void
+  // ) => {
+  //
+  // }
+
+  // const saveReading = (callback?: (e: Event) => void) => {
+  //   console.log('saveReading', { title, startPage, endPage, currentPage });
+  //   db.update(
+  //     {
+  //       id: getId(), // I may want to do something different here, in order to not create new entries when editing the pages
+  //       title,
+  //       pages: { start: startPage, end: endPage, current: currentPage },
+  //       isSaved: true,
+  //       isCompleted,
+  //     },
+  //     event => {
+  //       setIsSaved(true);
+  //       if (callback) callback(event);
+  //     }
+  //   );
+  // };
 
   const deleteReading = (callback?: (e: Event) => void) =>
     db.delete(getId(), event => {
@@ -249,15 +239,18 @@ function useReading(
 
   const pages = {
     get start() {
+      console.log('getting start');
       return startPage;
     },
     set start(n) {
+      console.log('setting start', n);
       setStartPage(n);
     },
     get end() {
       return endPage;
     },
     set end(n) {
+      console.log('setting end', n);
       setEndPage(n);
     },
     get current() {
@@ -268,11 +261,14 @@ function useReading(
     },
   };
 
+  console.log('reading render', { title, pages });
+
   return {
     get title() {
       return title;
     },
     set title(s) {
+      console.log('setting title', s);
       setTitle(s);
     },
     pages,
@@ -339,20 +335,42 @@ const ReadingForm = ({
   // const [reading, setReading] = useState<Reading | undefined>()
 
   const reading = useReading(loadReading);
-  console.log('rendering form');
-  console.log(reading);
   const [title, setTitle] = useState(reading.title);
   const [startPage, setStartPage] = useState(reading.pages.start);
   const [endPage, setEndPage] = useState(reading.pages.end);
 
+  // console.log('rendering form');
+  // console.log({ title, startPage, endPage });
+
   const configureReading = () => {
-    reading.title = title;
-    reading.pages.start = startPage;
-    reading.pages.end = endPage;
-    reading.save(() => {
-      update(true);
-      close();
-    });
+    reading.save(
+      {
+        title: title,
+        pages: {
+          start: startPage,
+          end: endPage,
+        },
+      },
+      () => {
+        update();
+        close();
+      }
+    );
+    // console.log('abt to save');
+    // console.log({ title, startPage, endPage });
+    // reading.title = title;
+    // reading.pages.start = startPage;
+    // reading.pages.end = endPage;
+    // console.log('saving as...');
+    // console.log({
+    //   title: reading.title,
+    //   startPage: reading.pages.start,
+    //   endPage: reading.pages.end,
+    // });
+    // reading.save(() => {
+    //   update();
+    //   close();
+    // });
   };
 
   // this causes an infinite loop
@@ -398,28 +416,29 @@ const ReadingForm = ({
 
 function AppReadings() {
   const [savedReadings, setSavedReadings] = useState<Reading[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formIsOpen, setFormIsOpen] = useState(false);
   const [formReading, setFormReading] = useState<Reading | null>(null);
 
-  console.log('re-rendering AppReadings');
-  console.log({ savedReadings, isLoading, isSaving, formIsOpen, formReading });
-
   const db = useDatabase();
 
   useEffect(() => {
-    console.log('effect attempting getAll');
-    db.getAll(null, result => {
-      console.log('db results');
-      console.log({ result });
-      setSavedReadings(result);
-      setIsLoading(false);
-    });
+    updateReadings();
+    // db.getAll(null, result => {
+    //   setSavedReadings(result);
+    //   setIsLoading(false);
+    // });
   }, []);
+
+  const updateReadings = () =>
+    db.getAll(null, result => setSavedReadings(result));
+  const deleteReading = (reading: Reading) =>
+    reading.id && db.delete(reading.id, updateReadings);
 
   const openForm = (reading?: Reading) => {
     console.log('opening reading', reading);
+    setFormReading(reading || null);
     setFormIsOpen(true);
   };
   const closeForm = () => {
@@ -433,15 +452,21 @@ function AppReadings() {
       {isLoading ? (
         <Typography>Loading...</Typography>
       ) : (
-        <AppReadingsList readings={savedReadings} handleEdit={openForm} />
+        <AppReadingsList
+          readings={savedReadings}
+          handleEdit={openForm}
+          handleDelete={deleteReading}
+        />
       )}
       <Button onClick={() => openForm()}>New reading</Button>
-      <ReadingForm
-        reading={formReading || undefined}
-        isOpen={formIsOpen}
-        close={closeForm}
-        update={setIsLoading}
-      />
+      {formIsOpen && (
+        <ReadingForm
+          reading={formReading || undefined}
+          isOpen={formIsOpen}
+          close={closeForm}
+          update={updateReadings}
+        />
+      )}
     </Box>
   );
 }
