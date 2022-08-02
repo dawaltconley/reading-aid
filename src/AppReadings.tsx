@@ -43,11 +43,21 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
   const [db, setDb] = useState<IDBDatabase | undefined>();
   const [queued, setQueued] = useState<Function[]>([]);
 
-  // const renderRef = useRef(0);
-  // const instance = useRef(dbInstance++);
-
   const addToQueue = (...functions: Function[]) =>
     setQueued([...queued, ...functions]);
+
+  const getDatabase = (): Promise<IDBDatabase> =>
+    db
+      ? Promise.resolve(db)
+      : new Promise(resolve => {
+          addToQueue((db: IDBDatabase) => resolve(db));
+        });
+
+  useEffect(() => {
+    if (!db || !queued.length) return;
+    queued.forEach(q => q(db));
+    setQueued([]);
+  }, [db, queued]);
 
   useEffect(() => {
     if (db) return () => db.close();
@@ -76,13 +86,40 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     request.addEventListener('upgradeneeded', onUpgrade);
   }, [db, name, version]);
 
-  const putReading = (
-    db: IDBDatabase | undefined,
+  // type MakeRequest = {
+  //   // (method: 'put', value: any, key?: string | undefined): Promise<IDBRequest>;
+  //   (method: 'delete', query: IDBKeyRange | string): Promise<IDBRequest>;
+  // };
+  //
+  // const makeRequest: MakeRequest = async (
+  //   method, // | 'get' | 'getAll',
+  //   ...args
+  // ): Promise<IDBRequest> => {
+  //   const readWrite = ['put', 'delete'];
+  //   const argumentLength = {
+  //     put: 2,
+  //     delete: 1,
+  //     get: 1,
+  //     getAll: 2,
+  //   };
+  //   const mode = ['put', 'delete'].includes(method) ? 'readwrite' : 'readonly';
+  //   const db = await getDatabase();
+  //   const transaction = db.transaction(['readings'], mode);
+  //   const objectStore = transaction.objectStore('readings');
+  //   // const request = objectStore[method].apply(objectStore, args);
+  //   console.log(args);
+  //   const o = objectStore[method];
+  //   const request = objectStore[method].apply(objectStore, args);
+  //   return request;
+  // };
+
+  const promisify;
+
+  const putReading = async (
     reading: Reading,
     callback?: (e: Event) => void
   ) => {
-    if (!db)
-      return addToQueue((db: IDBDatabase) => putReading(db, reading, callback));
+    const db = await getDatabase();
     const transaction = db.transaction(['readings'], 'readwrite');
     const objectStore = transaction.objectStore('readings');
     const request = objectStore.put(reading);
@@ -92,13 +129,8 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     // TODO: more event listening...
   };
 
-  const deleteReading = (
-    db: IDBDatabase | undefined,
-    id: string,
-    callback?: (e: Event) => void
-  ) => {
-    if (!db)
-      return addToQueue((db: IDBDatabase) => deleteReading(db, id, callback));
+  const deleteReading = async (id: string, callback?: (e: Event) => void) => {
+    const db = await getDatabase();
     const transaction = db.transaction(['readings'], 'readwrite');
     const objectStore = transaction.objectStore('readings');
     const request = objectStore.delete(id);
@@ -107,18 +139,14 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     });
   };
 
-  const getAllReadings = (
-    db: IDBDatabase | undefined,
+  const getAllReadings = async (
     query: IDBKeyRange | string | null | undefined,
     callback?: (e: Reading[]) => void
-  ): void => {
-    if (!db)
-      return addToQueue((db: IDBDatabase) =>
-        getAllReadings(db, query, callback)
-      );
+  ) => {
+    const db = await getDatabase();
     const transaction = db.transaction(['readings'], 'readonly');
     const objectStore = transaction.objectStore('readings');
-    const request = objectStore.getAll(/* query */); // TODO handle max-events, requery on later requests
+    const request = objectStore.getAll(query); // TODO handle max-events, requery on later requests
     request.addEventListener('success', () => {
       if (callback) callback(request.result);
     });
@@ -127,16 +155,10 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     // );
   };
 
-  useEffect(() => {
-    if (!db || !queued.length) return;
-    queued.forEach(q => q(db));
-    setQueued([]);
-  }, [db, queued]);
-
   return {
-    update: putReading.bind(null, db),
-    delete: deleteReading.bind(null, db),
-    getAll: getAllReadings.bind(null, db),
+    update: putReading,
+    delete: deleteReading,
+    getAll: getAllReadings,
   };
 }
 
