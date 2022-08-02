@@ -25,7 +25,7 @@ import {
 // } from '@fortawesome/pro-solid-svg-icons';
 
 interface Reading {
-  id?: string;
+  readonly id?: string;
   title?: string;
   pages: {
     start: number;
@@ -33,8 +33,8 @@ interface Reading {
     current?: number;
     // history: number[];
   };
-  isSaved: boolean;
-  isCompleted: boolean;
+  readonly isSaved: boolean;
+  readonly isCompleted: boolean;
 }
 
 function useDatabase(name: string, version: number) {
@@ -77,6 +77,24 @@ interface ReadingHook extends Reading {
   save: Function;
 }
 
+// class Reading2 implements Reading {
+//   title;
+//   pages;
+//   isSaved;
+//   isCompleted;
+//
+//   constructor(options: Reading) {
+//     const { title, pages } = options;
+//
+//     this.title = title;
+//     this.pages = pages;
+//     this.isSaved = false;
+//     this.isCompleted = false;
+//   }
+//
+//
+// }
+
 function useReading(
   options: Reading = {
     pages: {
@@ -95,36 +113,37 @@ function useReading(
   const [isCompleted, setIsCompleted] = useState(options.isCompleted);
 
   const db = useDatabase('reading_aid', 1);
-  const [queuedSave, setQueuedSave] = useState<Reading | undefined>();
+  const [queuedSave, setQueuedSave] = useState(false);
 
-  const save = useCallback(
-    (reading: Reading) => {
-      if (!db) return;
-      const transaction = db.transaction(['readings'], 'readwrite');
-      const objectStore = transaction.objectStore('readings');
-      const putRequest = objectStore.put(
-        {
-          title,
-          pages: { start: startPage, end: endPage },
-        },
-        getId()
-      );
-      putRequest.addEventListener('success', () => {
-        setIsSaved(true);
-      });
-      // TODO: more event listening...
-    },
-    [db]
+  const getId = useCallback(
+    () => `${title} (${startPage}-${endPage || '?'})`,
+    [title, startPage, endPage]
   );
 
+  const save = useCallback(() => {
+    if (!db) return setQueuedSave(true);
+    const transaction = db.transaction(['readings'], 'readwrite');
+    const objectStore = transaction.objectStore('readings');
+    const request = objectStore.put(
+      {
+        title,
+        pages: { start: startPage, end: endPage, current: currentPage },
+      },
+      getId()
+    );
+    request.addEventListener('success', () => {
+      setIsSaved(true);
+    });
+    // TODO: more event listening...
+  }, [db, title, startPage, endPage, currentPage, getId]);
+
+  // run a queuedSave when the database is ready
   useEffect(() => {
     if (db && queuedSave) {
-      save(queuedSave);
-      setQueuedSave(undefined);
+      save();
+      setQueuedSave(false);
     }
   }, [db, save, queuedSave]);
-
-  const getId = () => `${title} (${startPage}-${endPage || '?'})`;
 
   const nextPage = () => {
     const next = currentPage + 1;
@@ -136,36 +155,35 @@ function useReading(
     setCurrentPage(currentPage - 1 || 1);
   };
 
+  const pages = {
+    get start() {
+      return startPage;
+    },
+    set start(n) {
+      setStartPage(n);
+    },
+    get end() {
+      return endPage;
+    },
+    set end(n) {
+      setEndPage(n);
+    },
+    get current() {
+      return currentPage;
+    },
+    set current(n) {
+      setCurrentPage(n);
+    },
+  };
+
   return {
     get title() {
       return title;
     },
-    set title(title) {
-      setTitle(title);
+    set title(s) {
+      setTitle(s);
     },
-    pages: {
-      get start() {
-        return startPage;
-      },
-      set start(n) {
-        setStartPage(n);
-      },
-      get end() {
-        return endPage;
-      },
-      set end(n) {
-        setEndPage(n);
-      },
-      get current() {
-        return currentPage;
-      },
-      set current(n) {
-        setCurrentPage(n);
-      },
-      // start: startPage,
-      // end: endPage,
-      // current: currentPage,
-    },
+    pages,
     isSaved,
     isCompleted,
     get id() {
@@ -209,7 +227,7 @@ const ReadingForm = (props: {
     reading.save();
   };
 
-  useEffect(() => props.update(true), [reading.isSaved]);
+  useEffect(() => props.update(true), [props, reading.isSaved]);
 
   return (
     <Dialog open={props.isOpen} onBackdropClick={() => props.close()}>
