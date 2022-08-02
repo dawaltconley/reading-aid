@@ -24,6 +24,7 @@ import {
   faTrashCan as iconDelete,
 } from '@fortawesome/pro-solid-svg-icons';
 import _ from 'lodash';
+import { openDB, IDBPDatabase } from 'idb';
 
 interface Reading {
   readonly id?: string;
@@ -38,19 +39,37 @@ interface Reading {
   readonly isCompleted: boolean;
 }
 
-let dbInstance = 0;
-function useDatabase(name: string = 'reading_aid', version: number = 1) {
-  const [db, setDb] = useState<IDBDatabase | undefined>();
+const openDatabase = openDB('reading_aid', 1, {
+  upgrade(db) {
+    const objectStore = db.createObjectStore('readings', {
+      keyPath: 'id',
+    });
+    objectStore.createIndex('id', 'id', { unique: true });
+    objectStore.createIndex('title', 'title', { unique: false });
+    objectStore.createIndex('startPage', 'pages.start', { unique: false });
+    objectStore.createIndex('endPage', 'pages.end', { unique: false });
+    objectStore.createIndex('currentPage', 'pages.current', {
+      unique: false,
+    });
+  },
+});
+
+function useDatabase() {
+  const [db, setDb] = useState<IDBPDatabase | undefined>();
   const [queued, setQueued] = useState<Function[]>([]);
+
+  useEffect(() => {
+    openDatabase.then(setDb);
+  }, []);
 
   const addToQueue = (...functions: Function[]) =>
     setQueued([...queued, ...functions]);
 
-  const getDatabase = (): Promise<IDBDatabase> =>
+  const getDatabase = (): Promise<IDBPDatabase> =>
     db
       ? Promise.resolve(db)
       : new Promise(resolve => {
-          addToQueue((db: IDBDatabase) => resolve(db));
+          addToQueue((db: IDBPDatabase) => resolve(db));
         });
 
   useEffect(() => {
@@ -59,105 +78,30 @@ function useDatabase(name: string = 'reading_aid', version: number = 1) {
     setQueued([]);
   }, [db, queued]);
 
-  useEffect(() => {
-    if (db) return () => db.close();
-
-    const request = indexedDB.open(name, version);
-    const onSuccess = () => setDb(request.result);
-    const onError = () => console.error('Could not open database');
-    const onUpgrade = () => {
-      const db = request.result;
-
-      const objectStore = db.createObjectStore('readings', {
-        keyPath: 'id',
-      });
-      objectStore.createIndex('id', 'id', { unique: true });
-      objectStore.createIndex('title', 'title', { unique: false });
-      objectStore.createIndex('startPage', 'pages.start', { unique: false });
-      objectStore.createIndex('endPage', 'pages.end', { unique: false });
-      objectStore.createIndex('currentPage', 'pages.current', {
-        unique: false,
-      });
-      // objectStore.createIndex('history', 'pages.history', { unique: false });
-    };
-
-    request.addEventListener('success', onSuccess);
-    request.addEventListener('error', onError);
-    request.addEventListener('upgradeneeded', onUpgrade);
-  }, [db, name, version]);
-
-  // type MakeRequest = {
-  //   // (method: 'put', value: any, key?: string | undefined): Promise<IDBRequest>;
-  //   (method: 'delete', query: IDBKeyRange | string): Promise<IDBRequest>;
-  // };
-  //
-  // const makeRequest: MakeRequest = async (
-  //   method, // | 'get' | 'getAll',
-  //   ...args
-  // ): Promise<IDBRequest> => {
-  //   const readWrite = ['put', 'delete'];
-  //   const argumentLength = {
-  //     put: 2,
-  //     delete: 1,
-  //     get: 1,
-  //     getAll: 2,
-  //   };
-  //   const mode = ['put', 'delete'].includes(method) ? 'readwrite' : 'readonly';
-  //   const db = await getDatabase();
-  //   const transaction = db.transaction(['readings'], mode);
-  //   const objectStore = transaction.objectStore('readings');
-  //   // const request = objectStore[method].apply(objectStore, args);
-  //   console.log(args);
-  //   const o = objectStore[method];
-  //   const request = objectStore[method].apply(objectStore, args);
-  //   return request;
-  // };
-
-  const promisify;
-
-  const putReading = async (
-    reading: Reading,
-    callback?: (e: Event) => void
-  ) => {
+  const putReading = async (reading: Reading) => {
     const db = await getDatabase();
-    const transaction = db.transaction(['readings'], 'readwrite');
-    const objectStore = transaction.objectStore('readings');
-    const request = objectStore.put(reading);
-    request.addEventListener('success', event => {
-      if (callback) callback(event);
-    });
-    // TODO: more event listening...
+    return db.put('readings', reading);
   };
 
-  const deleteReading = async (id: string, callback?: (e: Event) => void) => {
+  const deleteReading = async (id: string) => {
     const db = await getDatabase();
-    const transaction = db.transaction(['readings'], 'readwrite');
-    const objectStore = transaction.objectStore('readings');
-    const request = objectStore.delete(id);
-    request.addEventListener('success', event => {
-      if (callback) callback(event);
-    });
+    return db.delete('readings', id);
   };
 
-  const getAllReadings = async (
-    query: IDBKeyRange | string | null | undefined,
-    callback?: (e: Reading[]) => void
-  ) => {
+  const getReading = async (query: IDBKeyRange | string) => {
     const db = await getDatabase();
-    const transaction = db.transaction(['readings'], 'readonly');
-    const objectStore = transaction.objectStore('readings');
-    const request = objectStore.getAll(query); // TODO handle max-events, requery on later requests
-    request.addEventListener('success', () => {
-      if (callback) callback(request.result);
-    });
-    // request.addEventListener('error', e =>
-    //   console.error(`Couldn't get readings`, e)
-    // );
+    return db.get('readings', query);
+  };
+
+  const getAllReadings = async (query?: IDBKeyRange | string | null) => {
+    const db = await getDatabase();
+    return db.getAll('readings', query);
   };
 
   return {
     update: putReading,
     delete: deleteReading,
+    get: getReading,
     getAll: getAllReadings,
   };
 }
@@ -208,15 +152,11 @@ function useReading(
     isCompleted,
   };
 
-  const saveReading = (
-    updates: Partial<Reading>,
-    callback?: (e: Event) => void
-  ) => {
+  const saveReading = async (updates: Partial<Reading>) => {
     const updated: Reading = _.merge(data, updates);
-    db.update({ ..._.merge(data, updates), isSaved: true }, event => {
+    db.update({ ..._.merge(data, updates), isSaved: true }).then(() => {
       // TODO update state after / during save
       setIsSaved(true);
-      if (callback) callback(event);
     });
   };
 
@@ -226,28 +166,7 @@ function useReading(
   //
   // }
 
-  // const saveReading = (callback?: (e: Event) => void) => {
-  //   console.log('saveReading', { title, startPage, endPage, currentPage });
-  //   db.update(
-  //     {
-  //       id: getId(), // I may want to do something different here, in order to not create new entries when editing the pages
-  //       title,
-  //       pages: { start: startPage, end: endPage, current: currentPage },
-  //       isSaved: true,
-  //       isCompleted,
-  //     },
-  //     event => {
-  //       setIsSaved(true);
-  //       if (callback) callback(event);
-  //     }
-  //   );
-  // };
-
-  const deleteReading = (callback?: (e: Event) => void) =>
-    db.delete(getId(), event => {
-      setIsSaved(false);
-      if (callback) callback(event);
-    });
+  const deleteReading = () => db.delete(getId()).then(() => setIsSaved(false));
 
   const nextPage = () => {
     const next = currentPage + 1;
@@ -365,19 +284,18 @@ const ReadingForm = ({
   // console.log({ title, startPage, endPage });
 
   const configureReading = () => {
-    reading.save(
-      {
+    reading
+      .save({
         title: title,
         pages: {
           start: startPage,
           end: endPage,
         },
-      },
-      () => {
+      })
+      .then(() => {
         update();
         close();
-      }
-    );
+      });
     // console.log('abt to save');
     // console.log({ title, startPage, endPage });
     // reading.title = title;
@@ -447,16 +365,12 @@ function AppReadings() {
 
   useEffect(() => {
     updateReadings();
-    // db.getAll(null, result => {
-    //   setSavedReadings(result);
-    //   setIsLoading(false);
-    // });
   }, []);
 
   const updateReadings = () =>
-    db.getAll(null, result => setSavedReadings(result));
+    db.getAll().then(result => setSavedReadings(result));
   const deleteReading = (reading: Reading) =>
-    reading.id && db.delete(reading.id, updateReadings);
+    reading.id && db.delete(reading.id).then(updateReadings);
 
   const openForm = (reading?: Reading) => {
     console.log('opening reading', reading);
