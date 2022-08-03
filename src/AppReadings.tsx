@@ -40,71 +40,74 @@ interface Reading {
 }
 
 const openDatabase = openDB('reading_aid', 1, {
-  upgrade(db) {
-    const objectStore = db.createObjectStore('readings', {
-      keyPath: 'id',
-    });
-    objectStore.createIndex('id', 'id', { unique: true });
-    objectStore.createIndex('title', 'title', { unique: false });
-    objectStore.createIndex('startPage', 'pages.start', { unique: false });
-    objectStore.createIndex('endPage', 'pages.end', { unique: false });
-    objectStore.createIndex('currentPage', 'pages.current', {
-      unique: false,
-    });
+  upgrade(db, oldVersion) {
+    switch (oldVersion) {
+      case 0: {
+        const objectStore = db.createObjectStore('readings', {
+          keyPath: 'id',
+        });
+        objectStore.createIndex('id', 'id', { unique: true });
+        objectStore.createIndex('title', 'title', { unique: false });
+        objectStore.createIndex('startPage', 'pages.start', { unique: false });
+        objectStore.createIndex('endPage', 'pages.end', { unique: false });
+        objectStore.createIndex('currentPage', 'pages.current', {
+          unique: false,
+        });
+      }
+    }
   },
 });
 
-function useDatabase() {
-  const [db, setDb] = useState<IDBPDatabase | undefined>();
-  const [queued, setQueued] = useState<Function[]>([]);
+class Database {
+  private db: Promise<IDBPDatabase>;
+  readonly store: string;
 
-  useEffect(() => {
-    openDatabase.then(setDb);
-  }, []);
+  constructor(name: string, version: number, store: string) {
+    this.store = store;
+    this.db = openDB(name, version, {
+      upgrade(db, oldVersion) {
+        switch (oldVersion) {
+          case 0: {
+            const objectStore = db.createObjectStore(store, {
+              keyPath: 'id',
+            });
+            objectStore.createIndex('id', 'id', { unique: true });
+            objectStore.createIndex('title', 'title', { unique: false });
+            objectStore.createIndex('startPage', 'pages.start', {
+              unique: false,
+            });
+            objectStore.createIndex('endPage', 'pages.end', { unique: false });
+            objectStore.createIndex('currentPage', 'pages.current', {
+              unique: false,
+            });
+          }
+        }
+      },
+    });
+  }
 
-  const addToQueue = (...functions: Function[]) =>
-    setQueued([...queued, ...functions]);
+  async update(reading: Reading) {
+    const db = await this.db;
+    return db.put(this.store, reading);
+  }
 
-  const getDatabase = (): Promise<IDBPDatabase> =>
-    db
-      ? Promise.resolve(db)
-      : new Promise(resolve => {
-          addToQueue((db: IDBPDatabase) => resolve(db));
-        });
+  async delete(id: string) {
+    const db = await this.db;
+    return db.delete(this.store, id);
+  }
 
-  useEffect(() => {
-    if (!db || !queued.length) return;
-    queued.forEach(q => q(db));
-    setQueued([]);
-  }, [db, queued]);
+  async get(query: IDBKeyRange | string) {
+    const db = await this.db;
+    return db.get(this.store, query);
+  }
 
-  const putReading = async (reading: Reading) => {
-    const db = await getDatabase();
-    return db.put('readings', reading);
-  };
-
-  const deleteReading = async (id: string) => {
-    const db = await getDatabase();
-    return db.delete('readings', id);
-  };
-
-  const getReading = async (query: IDBKeyRange | string) => {
-    const db = await getDatabase();
-    return db.get('readings', query);
-  };
-
-  const getAllReadings = async (query?: IDBKeyRange | string | null) => {
-    const db = await getDatabase();
-    return db.getAll('readings', query);
-  };
-
-  return {
-    update: putReading,
-    delete: deleteReading,
-    get: getReading,
-    getAll: getAllReadings,
-  };
+  async getAll(query?: IDBKeyRange | string | null) {
+    const db = await this.db;
+    return db.getAll(this.store, query);
+  }
 }
+
+const db = new Database('reading_aid', 1, 'readings');
 
 interface ReadingHook extends Reading {
   nextPage: () => void;
@@ -129,9 +132,6 @@ function useReading(
   const [currentPage, setCurrentPage] = useState(options.pages.start);
   const [isSaved, setIsSaved] = useState(options.isSaved);
   const [isCompleted, setIsCompleted] = useState(options.isCompleted);
-
-  const db = useDatabase();
-  const [queued, setQueued] = useState<string | false>(false);
 
   const getId = useCallback(
     () => `${title} (${startPage}-${endPage || '?'})`,
@@ -360,8 +360,6 @@ function AppReadings() {
   const [isSaving, setIsSaving] = useState(false);
   const [formIsOpen, setFormIsOpen] = useState(false);
   const [formReading, setFormReading] = useState<Reading | null>(null);
-
-  const db = useDatabase();
 
   useEffect(() => {
     updateReadings();
