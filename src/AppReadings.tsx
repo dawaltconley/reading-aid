@@ -110,68 +110,73 @@ class Database {
 
 const db = new Database('reading_aid', 1, 'readings');
 
-interface ReadingHook extends Reading {
+interface ReadingHook extends ReadingData {
   nextPage: () => void;
   previousPage: () => void;
   save: Function;
   delete: Function;
 }
 
-function useReading(
-  options: Reading = {
-    pages: {
-      start: 1,
-      // history: [],
-    },
-    isSaved: false,
-    isCompleted: false,
-  }
-): ReadingHook {
-  const [title, setTitle] = useState(options.title);
-  const [startPage, setStartPage] = useState(options.pages.start);
-  const [endPage, setEndPage] = useState(options.pages.end);
-  const [currentPage, setCurrentPage] = useState(options.pages.start);
+interface ReadingData {
+  id: string;
+  title: string;
+  pages: {
+    start: number;
+    end?: number;
+    current: number; // change separately from state
+    buffer: number[];
+  };
+  dateCreated: Date;
+  dateModified: Date;
+  isCompleted: boolean;
+  isSaved?: boolean; // don't need to save this value
+}
+
+function useReading(options: Partial<ReadingData> = {}) {
+  const [data, setData] = useState(
+    _.merge(
+      {
+        pages: { start: 1, current: 1, buffer: [] },
+        isSaved: false,
+        isCompleted: false,
+      },
+      options
+    )
+  );
+  const [currentPage, setCurrentPage] = useState(data.pages?.current || 1);
   const [isSaved, setIsSaved] = useState(options.isSaved);
   const [isCompleted, setIsCompleted] = useState(options.isCompleted);
 
-  const getId = useCallback(
-    () => `${title} (${startPage}-${endPage || '?'})`,
-    [title, startPage, endPage]
-  );
-
-  const data: Reading = {
-    get id() {
-      return getId();
-    },
-    title,
-    pages: {
-      start: startPage,
-      end: endPage,
-      current: currentPage,
-    },
-    isSaved,
-    isCompleted,
-  };
-
-  const saveReading = async (updates: Partial<Reading>) => {
-    const updated: Reading = _.merge(data, updates);
-    db.update({ ..._.merge(data, updates), isSaved: true }).then(() => {
-      // TODO update state after / during save
+  const saveReading = async (
+    updates: Partial<ReadingData> & { title: string }
+  ) => {
+    const now = new Date();
+    const defaults = {
+      id: updates.title + ' ' + now.getTime().toString(),
+      pages: {
+        start: 1,
+        buffer: [],
+      },
+      dateCreated: now,
+      isCompleted: false,
+    };
+    const updated: ReadingData = _.merge(defaults, data, updates, {
+      pages: { current: currentPage },
+      dateModified: now,
+    });
+    db.update({ ...updated, isSaved: true }).then(() => {
+      setData(old => _.merge(old, updated));
       setIsSaved(true);
     });
   };
 
-  // const getReading = (
-  //   callback?: (e: Event) => void
-  // ) => {
-  //
-  // }
-
-  const deleteReading = () => db.delete(getId()).then(() => setIsSaved(false));
+  const deleteReading = () =>
+    isSaved && data.id && db.delete(data.id).then(() => setIsSaved(false));
 
   const nextPage = () => {
     const next = currentPage + 1;
-    if (endPage && next > endPage) setIsCompleted(true);
+    const end = data.pages?.end;
+    if (end && next > end) setIsCompleted(true);
     else setCurrentPage(next);
   };
 
@@ -179,46 +184,8 @@ function useReading(
     setCurrentPage(currentPage - 1 || 1);
   };
 
-  const pages = {
-    get start() {
-      console.log('getting start');
-      return startPage;
-    },
-    set start(n) {
-      console.log('setting start', n);
-      setStartPage(n);
-    },
-    get end() {
-      return endPage;
-    },
-    set end(n) {
-      console.log('setting end', n);
-      setEndPage(n);
-    },
-    get current() {
-      return currentPage;
-    },
-    set current(n) {
-      setCurrentPage(n);
-    },
-  };
-
-  console.log('reading render', { title, pages });
-
   return {
-    get title() {
-      return title;
-    },
-    set title(s) {
-      console.log('setting title', s);
-      setTitle(s);
-    },
-    pages,
-    isSaved,
-    isCompleted,
-    get id() {
-      return getId();
-    },
+    ...data,
     nextPage,
     previousPage,
     save: saveReading,
@@ -269,26 +236,26 @@ const ReadingForm = ({
   close,
   update,
 }: {
-  reading?: Reading;
+  reading?: Partial<ReadingData>;
   isOpen: boolean;
   close: Function;
   update: Function;
 }) => {
-  // const [reading, setReading] = useState<Reading | undefined>()
-
   const reading = useReading(loadReading);
   const [title, setTitle] = useState(reading.title);
   const [startPage, setStartPage] = useState(reading.pages.start);
   const [endPage, setEndPage] = useState(reading.pages.end);
 
-  // console.log('rendering form');
-  // console.log({ title, startPage, endPage });
+  console.log('rendering form');
+  console.log({ title, startPage, endPage });
 
-  const configureReading = () => {
+  const handleSubmit = () => {
+    if (!title) throw new Error('title is required');
     reading
       .save({
         title: title,
         pages: {
+          ...reading.pages, // may not want this, just a DeepPartial: https://stackoverflow.com/questions/61132262/typescript-deep-partial
           start: startPage,
           end: endPage,
         },
@@ -297,25 +264,7 @@ const ReadingForm = ({
         update();
         close();
       });
-    // console.log('abt to save');
-    // console.log({ title, startPage, endPage });
-    // reading.title = title;
-    // reading.pages.start = startPage;
-    // reading.pages.end = endPage;
-    // console.log('saving as...');
-    // console.log({
-    //   title: reading.title,
-    //   startPage: reading.pages.start,
-    //   endPage: reading.pages.end,
-    // });
-    // reading.save(() => {
-    //   update();
-    //   close();
-    // });
   };
-
-  // this causes an infinite loop
-  // useEffect(() => update(true), [update, reading.isSaved]);
 
   return (
     <Dialog open={isOpen} onBackdropClick={() => close()}>
@@ -348,7 +297,7 @@ const ReadingForm = ({
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => configureReading()}>Submit</Button>
+        <Button onClick={() => handleSubmit()}>Submit</Button>
         <Button onClick={() => close()}>Cancel</Button>
       </DialogActions>
     </Dialog>
@@ -360,18 +309,26 @@ function AppReadings() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formIsOpen, setFormIsOpen] = useState(false);
-  const [formReading, setFormReading] = useState<Reading | null>(null);
+  const [formReading, setFormReading] = useState<Partial<ReadingData> | null>(
+    null
+  );
 
   useEffect(() => {
     updateReadings();
   }, []);
 
   const updateReadings = () =>
-    db.getAll().then(result => setSavedReadings(result));
+    db.getAll().then(result => {
+      console.log({ result });
+      const lastModified = result.sort(
+        (a, b) => b.dateModified.getTime() - a.dateModified.getTime()
+      );
+      setSavedReadings(lastModified);
+    });
   const deleteReading = (reading: Reading) =>
     reading.id && db.delete(reading.id).then(updateReadings);
 
-  const openForm = (reading?: Reading) => {
+  const openForm = (reading?: Partial<ReadingData>) => {
     console.log('opening reading', reading);
     setFormReading(reading || null);
     setFormIsOpen(true);
