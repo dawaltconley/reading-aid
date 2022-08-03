@@ -14,3 +14,7 @@ export interface Reading {
   isCompleted: boolean;
   isSaved?: boolean;
 }
+
+export interface PartialReading extends Partial<Reading> {
+  pages?: Partial<Pages>;
+}

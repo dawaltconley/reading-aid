@@ -22,7 +22,7 @@ import './App.css';
 import AppMenu from './AppMenu';
 import AppReadings from './AppReadings';
 import { usePauseableTimer } from '../hooks/usePauseableTimer';
-import { usePageTimes } from '../hooks/useReading';
+import { useReading, useActiveReading } from '../hooks/useReading';
 
 const bell = new Audio(bellSound);
 const playBell = () => {
@@ -30,49 +30,20 @@ const playBell = () => {
   return bell.play();
 };
 
-function PageCounter(props: {
-  initialPage?: number;
-  pageBuffer?: number;
-  extraTime?: number;
-}) {
-  const { initialPage = 1, pageBuffer = 7, extraTime = 30000 } = props;
-  console.log('updated!');
+function PageCounter() {
+  const reading = useActiveReading({}, { timeUpCallback: playBell });
 
-  const timer = usePauseableTimer(0, playBell);
-  const [pageStart, setPageStart] = useState(Date.now());
-
-  const pageTimes = usePageTimes(pageBuffer);
-  const [currentPage, setCurrentPage] = useState(initialPage);
-
-  const pageTurn = () => {
-    const now = Date.now();
-    if (timer.active) {
-      const timeSpentReading = now - pageStart - timer.timePaused;
-      pageTimes.add(timeSpentReading);
-      const nextPageTime = Math.ceil(pageTimes.median + extraTime);
-      timer.reset(nextPageTime);
-      timer.start();
-      setPageStart(now);
-      setCurrentPage(currentPage + 1);
-    } else {
-      if (currentPage === initialPage) {
-        setPageStart(now);
-      }
-      timer.start();
-    }
-  };
-
-  const displayText = timer.active
-    ? `Current page: ${currentPage}`
+  const displayText = reading.active
+    ? `Current page: ${reading.pages.current}`
     : 'Press anywhere to start';
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
-      console.log('time left: ', timer.timeLeft);
-      console.log('time running: ', timer.timeRunning);
+      console.log('time left: ', reading.timeLeft);
+      console.log('time running: ', reading.timeRunning);
     }, 1000);
     return () => clearInterval(checkInterval);
-  }, [timer]);
+  }, [reading]);
 
   return (
     <Container
@@ -107,12 +78,12 @@ function PageCounter(props: {
           <FontAwesomeIcon icon={faBackwardStep} />
         </IconButton>
         <IconButton
-          aria-label={timer.paused ? 'play' : 'pause'}
-          onClick={timer.toggle}
+          aria-label={reading.paused ? 'play' : 'pause'}
+          onClick={reading.paused ? reading.start : reading.pause}
         >
-          <FontAwesomeIcon icon={timer.paused ? faPlay : faPause} />
+          <FontAwesomeIcon icon={reading.paused ? faPlay : faPause} />
         </IconButton>
-        <IconButton aria-label="next page" onClick={pageTurn}>
+        <IconButton aria-label="next page" onClick={reading.nextPage}>
           <FontAwesomeIcon icon={faForwardStep} />
         </IconButton>
       </Stack>
@@ -128,7 +99,7 @@ function App() {
   // );
   return (
     <div className="App">
-      <PageCounter extraTime={0} />
+      <PageCounter />
     </div>
   );
 }

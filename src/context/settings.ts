@@ -2,5 +2,6 @@ import { createContext } from 'react';
 
 export default createContext({
   maxBufferLength: 7,
-  extraReadingTime: 30000,
+  // extraReadingTime: 30000,
+  extraReadingTime: 0,
 });

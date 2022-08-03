@@ -1,4 +1,4 @@
-import { Reading } from '../../types/common';
+import { Reading, PartialReading } from '../../types/common';
 
 import _ from 'lodash';
 import { useState, useEffect, useContext } from 'react';
@@ -55,7 +55,8 @@ export function usePageTimes(
 /**
  * Hook for interacting with Reading-type objects.
  */
-export function useReading(options: Partial<Reading> = {}) {
+export function useReading(options: PartialReading = {}) {
+  const { dateModified, ...reading } = options;
   const [data, setData] = useState(
     _.merge(
       {
@@ -63,39 +64,64 @@ export function useReading(options: Partial<Reading> = {}) {
         isSaved: false,
         isCompleted: false,
       },
-      options
+      reading
     )
   );
   const [currentPage, setCurrentPage] = useState(data.pages?.current || 1);
   const [isSaved, setIsSaved] = useState(options.isSaved);
   const [isCompleted, setIsCompleted] = useState(options.isCompleted);
+  const [modified, setModified] = useState(dateModified);
 
   // could subscribe to save when data state changes
 
-  const saveReading = async (updates: Partial<Reading> & { title: string }) => {
+  const update = async (updates: PartialReading) =>
+    setData(old => _.merge(old, updates));
+
+  useEffect(() => {
+    // save reading on data change, if it has a title
+    const title = data.title;
+    if (!title) return;
     const now = new Date();
-    const defaults = {
-      id: updates.title + ' ' + now.getTime().toString(),
-      pages: {
-        start: 1,
-        buffer: [],
-      },
+    const updated = {
+      id: title + ' ' + now.getTime().toString(),
       dateCreated: now,
-      isCompleted: false,
+      title,
+      ...data,
     };
-    const updated: Reading = _.merge(defaults, data, updates, {
-      pages: { current: currentPage },
+    if (!_.isEqual(data, updated)) setData(updated);
+    db.update({
+      ...updated,
       dateModified: now,
-    });
-    db.update({ ...updated, isSaved: true }).then(() => {
-      setData(old => _.merge(old, updated));
+    }).then(() => {
       setIsSaved(true);
+      setModified(now);
     });
-  };
+  }, [data]);
+
+  // const saveReading = async (updates: PartialReading & { title: string }) => {
+  //   const now = new Date();
+  //   const defaults = {
+  //     id: updates.title + ' ' + now.getTime().toString(),
+  //     pages: {
+  //       start: 1,
+  //       buffer: [],
+  //     },
+  //     dateCreated: now,
+  //     isCompleted: false,
+  //   };
+  //   const updated: Reading = _.merge(defaults, data, updates, {
+  //     pages: { current: currentPage },
+  //     dateModified: now,
+  //   });
+  //   db.update({ ...updated, isSaved: true }).then(() => {
+  //     setIsSaved(true);
+  //   });
+  // };
 
   const deleteReading = () =>
     isSaved && data.id && db.delete(data.id).then(() => setIsSaved(false));
 
+  // TODO rewrite
   const nextPage = () => {
     const next = currentPage + 1;
     const end = data.pages?.end;
@@ -111,13 +137,13 @@ export function useReading(options: Partial<Reading> = {}) {
     ...data,
     nextPage,
     previousPage,
-    save: saveReading,
+    update,
     delete: deleteReading,
   };
 }
 
 export function useActiveReading(
-  readingData: Reading,
+  readingData: PartialReading,
   options: { timeUpCallback: Function }
 ) {
   const { maxBufferLength, extraReadingTime } = useContext(Settings);
@@ -127,27 +153,26 @@ export function useActiveReading(
   const pageTimes = usePageTimes(maxBufferLength, reading.pages.buffer);
   const timer = usePauseableTimer(0, timeUpCallback); // TODO: save progress on current page to reading
 
-  const [pageStart, setPageStart] = useState(Date.now());
+  // const [pageStart, setPageStart] = useState(Date.now());
   const [isFirstTime, setIsFirstTime] = useState(
     reading.pages.current === reading.pages.start
   );
 
-  const start = (now = Date.now()) => {
+  const start = (/* now = Date.now() */) => {
     if (isFirstTime) {
-      setPageStart(now);
+      // setPageStart(now);
       setIsFirstTime(false);
     }
     timer.start();
   };
 
-  const turnPage = (now = Date.now()) => {
+  const nextPage = () => {
     const timeSpentReading = timer.timeRunning;
     pageTimes.add(timeSpentReading);
     const nextPageTime = Math.ceil(pageTimes.median + extraReadingTime);
     timer.reset(nextPageTime);
     timer.start();
-    reading.save({
-      // TODO only save if saved before
+    reading.update({
       pages: {
         current: reading.pages.current + 1,
         buffer: pageTimes.buffer,
@@ -155,23 +180,17 @@ export function useActiveReading(
     });
   };
 
-  // const timer = usePauseableTimer();
-  //
-  // const pageTurn = () => {
-  //   const now = Date.now();
-  //   if (timer.active) {
-  //     const timeSpentReading = now - pageStart - timer.timePaused;
-  //     pageTimes.add(timeSpentReading);
-  //     const nextPageTime = Math.ceil(pageTimes.median + extraTime);
-  //     timer.reset(nextPageTime);
-  //     timer.start();
-  //     setPageStart(now);
-  //     setCurrentPage(currentPage + 1);
-  //   } else {
-  //     if (currentPage === initialPage) {
-  //       setPageStart(now);
-  //     }
-  //     timer.start();
-  //   }
-  // };
+  return {
+    ...reading,
+    ..._.pick(timer, [
+      'pause',
+      'paused',
+      'active',
+      'timeLeft',
+      'timeRunning',
+      'timePaused',
+    ]),
+    start,
+    nextPage,
+  };
 }
