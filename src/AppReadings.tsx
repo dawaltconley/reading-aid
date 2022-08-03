@@ -66,29 +66,30 @@ class Database {
     this.store = store;
     this.db = openDB(name, version, {
       upgrade(db, oldVersion) {
+        const generic = { unique: false };
         switch (oldVersion) {
           case 0: {
             const objectStore = db.createObjectStore(store, {
               keyPath: 'id',
             });
             objectStore.createIndex('id', 'id', { unique: true });
-            objectStore.createIndex('title', 'title', { unique: false });
-            objectStore.createIndex('startPage', 'pages.start', {
-              unique: false,
-            });
-            objectStore.createIndex('endPage', 'pages.end', { unique: false });
-            objectStore.createIndex('currentPage', 'pages.current', {
-              unique: false,
-            });
+            objectStore.createIndex('title', 'title', generic);
+            objectStore.createIndex('startPage', 'pages.start', generic);
+            objectStore.createIndex('endPage', 'pages.end', generic);
+            objectStore.createIndex('currentPage', 'pages.current', generic);
+            objectStore.createIndex('pageBuffer', 'pages.buffer', generic);
+            objectStore.createIndex('dateCreated', 'dateCreated', generic);
+            objectStore.createIndex('dateModified', 'dateModified', generic);
+            objectStore.createIndex('isCompleted', 'isCompleted', generic);
           }
         }
       },
     });
   }
 
-  async update(reading: Reading) {
+  async update(reading: ReadingData) {
     const db = await this.db;
-    return db.put(this.store, reading);
+    return db.put(this.store, reading).then(e => console.log('object key', e));
   }
 
   async delete(id: string) {
