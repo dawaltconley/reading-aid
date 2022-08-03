@@ -86,10 +86,9 @@ const ReadingForm = ({
   const handleSubmit = () => {
     if (!title) throw new Error('title is required');
     reading
-      .save({
+      .update({
         title: title,
         pages: {
-          ...reading.pages, // may not want this, just a DeepPartial: https://stackoverflow.com/questions/61132262/typescript-deep-partial
           start: startPage,
           end: endPage,
         },
