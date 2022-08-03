@@ -149,6 +149,9 @@ function AppReadings() {
     updateReadings();
   }, []);
 
+  console.log('querying');
+  db.get('foobar').then(console.log);
+
   const updateReadings = () =>
     db.getAll().then(result => {
       console.log({ result });
