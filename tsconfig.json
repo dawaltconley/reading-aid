@@ -1,4 +1,6 @@
 {
+  "include": ["src/**/*", "types/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts"],
   "compilerOptions": {
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -15,6 +17,5 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
-  },
-  "include": ["src", "types"]
+  }
 }
