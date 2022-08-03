@@ -69,6 +69,7 @@ function PageCounter(props: {
   useEffect(() => {
     const checkInterval = setInterval(() => {
       console.log('time left: ', timer.timeLeft);
+      console.log('time running: ', timer.timeRunning);
     }, 1000);
     return () => clearInterval(checkInterval);
   }, [timer]);
@@ -120,16 +121,16 @@ function PageCounter(props: {
 }
 
 function App() {
-  return (
-    <div className="App">
-      <AppReadings />
-    </div>
-  );
   // return (
   //   <div className="App">
-  //     <PageCounter extraTime={0} />
+  //     <AppReadings />
   //   </div>
   // );
+  return (
+    <div className="App">
+      <PageCounter extraTime={0} />
+    </div>
+  );
 }
 
 export default App;

@@ -12,13 +12,28 @@ export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [paused, setPaused] = useState(true);
+  const [timeRunning, setTimeRunning] = useState(0);
+
+  // const getTimeRunning = () => startedAt ? Date.now() - startedAt : 0;
+  // const getTimePaused = () => pausedAt ? Date.now() - pausedAt : 0;
 
   /** Get the remaining time in milliseconds. */
-  const getTimeLeft = useCallback(() => {
-    if (paused) return timeLeft;
-    const timeRunning = startedAt ? Date.now() - startedAt : 0;
-    return timeLeft - timeRunning;
-  }, [paused, timeLeft, startedAt]);
+  const getTimeLeft = useCallback(
+    (now = Date.now()) => {
+      if (paused) return timeLeft;
+      const timeRunning = startedAt ? now - startedAt : 0;
+      return timeLeft - timeRunning;
+    },
+    [paused, timeLeft, startedAt]
+  );
+
+  const getTimeRunning = useCallback(
+    (now = Date.now()) => {
+      if (!paused && startedAt) return now - startedAt + timeRunning;
+      return timeRunning;
+    },
+    [paused, startedAt, timeRunning]
+  );
 
   /** Updates the callback function that executes when the timer runs out. */
   useEffect(() => {
@@ -40,10 +55,12 @@ export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
 
   /** Pause the timer. */
   const pause = useCallback(() => {
-    setTimeLeft(getTimeLeft());
+    const now = Date.now();
+    setTimeLeft(getTimeLeft(now));
+    setTimeRunning(getTimeRunning(now));
     setPaused(true);
-    setPausedAt(Date.now());
-  }, [getTimeLeft]);
+    setPausedAt(now);
+  }, [getTimeLeft, getTimeRunning]);
 
   /**
    * Reset the timer.
@@ -51,6 +68,7 @@ export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
    */
   const reset = useCallback((newTime = 0) => {
     setTimeLeft(newTime);
+    setTimeRunning(0);
     setPaused(true);
     setTimePaused(0);
     setPausedAt(null);
@@ -71,6 +89,9 @@ export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
     },
     get timeLeft() {
       return getTimeLeft();
+    },
+    get timeRunning() {
+      return getTimeRunning();
     },
     timePaused,
   };
