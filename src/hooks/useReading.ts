@@ -51,7 +51,7 @@ export function usePageTimes(
 }
 
 /**
- * Hook for the
+ * Hook for interacting with Reading-type objects.
  */
 export function useReading(options: Partial<Reading> = {}) {
   const [data, setData] = useState(
