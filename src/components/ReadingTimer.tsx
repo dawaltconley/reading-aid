@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useContext } from 'react';
 import { Container, Stack, Typography, IconButton } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -10,6 +10,7 @@ import {
 
 import AppMenu from './AppMenu';
 import { useActiveReading } from '../hooks/useReading';
+import ActiveReading from '../context/ActiveReading';
 import bellSound from '../assets/bell.mp3';
 
 const bell = new Audio(bellSound);
@@ -19,12 +20,9 @@ const playBell = () => {
 };
 
 export default function ReadingTimer() {
-  const reading = useActiveReading(
-    {},
-    {
-      timeUpCallback: playBell,
-    }
-  );
+  const reading = useActiveReading(useContext(ActiveReading), {
+    timeUpCallback: playBell,
+  });
 
   const displayText = reading.active
     ? `Current page: ${reading.pages.current}`
