@@ -6,16 +6,18 @@ import { useState, useEffect, useCallback } from 'react';
  * @param cb - Callback executed when time runs out.
  */
 export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
+  const [time, setTime] = useState(initialTime);
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [callback, setCallback] = useState(() => cb);
   const [timePaused, setTimePaused] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [paused, setPaused] = useState(true);
-  const [timeRunning, setTimeRunning] = useState(0);
 
   // const getTimeRunning = () => startedAt ? Date.now() - startedAt : 0;
   // const getTimePaused = () => pausedAt ? Date.now() - pausedAt : 0;
+
+  useEffect(() => setTimeLeft(time), [time]);
 
   /** Get the remaining time in milliseconds. */
   const getTimeLeft = useCallback(
@@ -28,11 +30,8 @@ export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   );
 
   const getTimeRunning = useCallback(
-    (now = Date.now()) => {
-      if (!paused && startedAt) return now - startedAt + timeRunning;
-      return timeRunning;
-    },
-    [paused, startedAt, timeRunning]
+    () => time - getTimeLeft(),
+    [time, getTimeLeft]
   );
 
   /** Updates the callback function that executes when the timer runs out. */
@@ -57,18 +56,16 @@ export function usePauseableTimer(initialTime = 0, cb: Function | null = null) {
   const pause = useCallback(() => {
     const now = Date.now();
     setTimeLeft(getTimeLeft(now));
-    setTimeRunning(getTimeRunning(now));
     setPaused(true);
     setPausedAt(now);
-  }, [getTimeLeft, getTimeRunning]);
+  }, [getTimeLeft]);
 
   /**
    * Reset the timer.
    * @param newTime - time on the clock when reset.
    */
   const reset = useCallback((newTime = 0) => {
-    setTimeLeft(newTime);
-    setTimeRunning(0);
+    setTime(newTime);
     setPaused(true);
     setTimePaused(0);
     setPausedAt(null);
