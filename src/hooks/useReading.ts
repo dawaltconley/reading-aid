@@ -1,7 +1,7 @@
 import { Reading, PartialReading } from '../../types/common';
 
 import _ from 'lodash';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import db from '../services/Database';
 import { usePauseableTimer } from '../hooks/usePauseableTimer';
 import Settings from '../context/Settings';
@@ -67,56 +67,40 @@ export function useReading(options: PartialReading = {}) {
       reading
     )
   );
-  const [currentPage, setCurrentPage] = useState(data.pages?.current || 1);
   const [isSaved, setIsSaved] = useState(options.isSaved);
-  const [isCompleted, setIsCompleted] = useState(options.isCompleted);
-  const [modified, setModified] = useState(dateModified);
 
-  // could subscribe to save when data state changes
+  console.log('current page', data.pages.current);
+  const update = async (updates: PartialReading) => {
+    console.log('updating', { updates }, { data });
+    let updated = _.merge({ ...data }, updates);
+    if (_.isEqual(data, updated)) return;
 
-  const update = async (updates: PartialReading) =>
-    setData(old => _.merge(old, updates));
+    const title = updated.title;
+    console.log('setting state');
+    if (!title) return setData(updated);
 
-  useEffect(() => {
-    // save reading on data change, if it has a title
-    const title = data.title;
-    if (!title) return;
+    // if reading has a title, save on update
     const now = new Date();
-    const updated = {
-      id: title + ' ' + now.getTime().toString(),
+    const updated2 = {
+      id: updated.title + ' ' + now.getTime().toString(),
       dateCreated: now,
       title,
-      ...data,
-    };
-    if (!_.isEqual(data, updated)) setData(updated);
-    db.update({
       ...updated,
       dateModified: now,
-    }).then(() => {
+      isSaved: true,
+    };
+    db.update(updated2).then(() => {
+      console.log('saved');
       setIsSaved(true);
-      setModified(now);
+      setData(updated);
     });
-  }, [data]);
+  };
 
   const deleteReading = () =>
     isSaved && data.id && db.delete(data.id).then(() => setIsSaved(false));
 
-  // TODO rewrite
-  const nextPage = () => {
-    const next = currentPage + 1;
-    const end = data.pages?.end;
-    if (end && next > end) setIsCompleted(true);
-    else setCurrentPage(next);
-  };
-
-  const previousPage = () => {
-    setCurrentPage(currentPage - 1 || 1);
-  };
-
   return {
     ...data,
-    nextPage,
-    previousPage,
     update,
     delete: deleteReading,
   };
@@ -150,12 +134,22 @@ export function useActiveReading(
     const nextPageTime = Math.ceil(pageTimes.median + extraReadingTime);
     timer.reset(nextPageTime);
     timer.start();
-    reading.update({
-      pages: {
-        current: reading.pages.current + 1,
-        buffer: pageTimes.buffer,
-      },
-    });
+
+    const { current, end } = reading.pages;
+    if (end && current === end)
+      reading.update({
+        isCompleted: true,
+        pages: {
+          buffer: pageTimes.buffer,
+        },
+      });
+    else
+      reading.update({
+        pages: {
+          current: reading.pages.current + 1,
+          buffer: pageTimes.buffer,
+        },
+      });
   };
 
   return {

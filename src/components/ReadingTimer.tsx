@@ -1,5 +1,11 @@
 import { useEffect, useContext } from 'react';
-import { Container, Stack, Typography, IconButton } from '@mui/material';
+import {
+  Container,
+  Stack,
+  Typography,
+  IconButton,
+  SvgIcon,
+} from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPlay,
@@ -8,7 +14,6 @@ import {
   faBackwardStep,
 } from '@fortawesome/pro-solid-svg-icons';
 
-import AppMenu from './AppMenu';
 import { useActiveReading } from '../hooks/useReading';
 import ActiveReading from '../context/ActiveReading';
 import bellSound from '../assets/bell.mp3';
@@ -43,10 +48,9 @@ export default function ReadingTimer() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: '100vh',
+        height: '100%',
       }}
     >
-      <AppMenu open={false} />
       <Typography>{displayText}</Typography>
       <Stack direction="row">
         <IconButton

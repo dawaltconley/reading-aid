@@ -3,6 +3,7 @@ import { Reading } from '../../types/common';
 import { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   IconButton,
   Typography,
   List,
@@ -85,6 +86,7 @@ const ReadingForm = ({
 
   const handleSubmit = () => {
     if (!title) throw new Error('title is required');
+    console.log('submitting update');
     reading
       .update({
         title: title,
@@ -148,12 +150,8 @@ function AppReadings() {
     updateReadings();
   }, []);
 
-  console.log('querying');
-  db.get('foobar').then(console.log);
-
   const updateReadings = () =>
     db.getAll().then(result => {
-      console.log({ result });
       const lastModified = result.sort(
         (a, b) => b.dateModified.getTime() - a.dateModified.getTime()
       );
@@ -173,7 +171,7 @@ function AppReadings() {
   };
 
   return (
-    <Box>
+    <Container>
       <Typography>Saved readings:</Typography>
       {isLoading ? (
         <Typography>Loading...</Typography>
@@ -193,7 +191,7 @@ function AppReadings() {
           update={updateReadings}
         />
       )}
-    </Box>
+    </Container>
   );
 }
 

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { MenuItem, PartialReading } from '../../types/common';
+import { useState, useContext } from 'react';
 import {
   AppBar,
+  Box,
   Toolbar,
   SwipeableDrawer,
   IconButton,
@@ -12,47 +14,24 @@ import {
   ListItemText,
 } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  IconDefinition,
-  faBars,
-  faFolderOpen,
-  faDownload,
-} from '@fortawesome/pro-solid-svg-icons';
+import { faBars } from '@fortawesome/pro-solid-svg-icons';
 
-interface MenuItem {
-  name: string;
-  icon: IconDefinition;
-  action: Function;
-}
+import ActiveReading from '../context/ActiveReading';
 
-const menuItems: MenuItem[] = [
-  {
-    name: 'Load',
-    icon: faFolderOpen,
-    action: () => console.log('not implemented'),
-  },
-  {
-    name: 'Install',
-    icon: faDownload,
-    action: () => console.log('not implemented'),
-  },
-];
+function AppMenu(props: { items: MenuItem[]; open: boolean }) {
+  const { items = [] } = props;
 
-function AppMenu(
-  props: {
-    open: boolean;
-  } = { open: false }
-) {
+  const activeReading: PartialReading = useContext(ActiveReading);
   const [open, setOpen] = useState(props.open);
   const toggleDrawer = () => setOpen(!open);
 
   return (
-    <AppBar position="fixed" component="nav">
+    <AppBar position="sticky" component="nav">
       <Toolbar>
         <IconButton onClick={toggleDrawer}>
           <FontAwesomeIcon icon={faBars} />
         </IconButton>
-        <Typography>Name of current reading</Typography>
+        <Typography>{activeReading.title || 'New reading'}</Typography>
       </Toolbar>
       <SwipeableDrawer
         anchor="left"
@@ -60,12 +39,17 @@ function AppMenu(
         open={open}
         onOpen={toggleDrawer}
         onClose={toggleDrawer}
-        swipeAreaWidth={50}
+        swipeAreaWidth={0}
       >
         <List sx={{ minWidth: '200px' }}>
-          {menuItems.map(item => (
+          {items.map(item => (
             <ListItem key={item.name} disableGutters>
-              <ListItemButton onClick={() => item.action()}>
+              <ListItemButton
+                onClick={() => {
+                  toggleDrawer();
+                  item.action();
+                }}
+              >
                 <ListItemIcon>
                   <FontAwesomeIcon icon={item.icon} />
                 </ListItemIcon>
