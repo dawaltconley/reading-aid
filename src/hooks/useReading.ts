@@ -133,14 +133,12 @@ export function useActiveReading(
   const pageTimes = usePageTimes(maxBufferLength, reading.pages.buffer);
   const timer = usePauseableTimer(0, timeUpCallback); // TODO: save progress on current page to reading
 
-  // const [pageStart, setPageStart] = useState(Date.now());
   const [isFirstTime, setIsFirstTime] = useState(
     reading.pages.current === reading.pages.start
   );
 
-  const start = (/* now = Date.now() */) => {
+  const start = () => {
     if (isFirstTime) {
-      // setPageStart(now);
       setIsFirstTime(false);
     }
     timer.start();
