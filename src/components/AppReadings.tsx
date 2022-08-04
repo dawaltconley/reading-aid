@@ -53,19 +53,19 @@ const AppReadingsList = ({
               </span>
             }
           />
-          <ButtonGroup size="large">
-            {handleEdit && (
-              <Button aria-label="edit" onClick={() => handleEdit(reading)}>
-                <FontAwesomeIcon icon={iconEdit} />
-              </Button>
-            )}
-            {handleDelete && (
-              <Button aria-label="delete" onClick={() => handleDelete(reading)}>
-                <FontAwesomeIcon icon={iconDelete} />
-              </Button>
-            )}
-          </ButtonGroup>
         </ListItemButton>
+        <ButtonGroup size="large">
+          {handleEdit && (
+            <Button aria-label="edit" onClick={() => handleEdit(reading)}>
+              <FontAwesomeIcon icon={iconEdit} />
+            </Button>
+          )}
+          {handleDelete && (
+            <Button aria-label="delete" onClick={() => handleDelete(reading)}>
+              <FontAwesomeIcon icon={iconDelete} />
+            </Button>
+          )}
+        </ButtonGroup>
       </ListItem>
     ))}
   </List>
