@@ -1,21 +1,28 @@
-import { MenuItem } from '../../types/common';
+import { MenuItem, Reading, PartialReading } from '../../types/common';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Box, Container } from '@mui/material';
 import { faFolderOpen, faDownload } from '@fortawesome/pro-solid-svg-icons';
 
 import './App.css';
 
+import ActiveReading from '../context/ActiveReading';
 import AppMenu from './AppMenu';
 import AppReadings from './AppReadings';
 import ReadingTimer from './ReadingTimer';
 
 type PageNames = 'readings' | 'timer';
 
-function AppBody({ page }: { page?: PageNames }) {
+function AppBody({
+  page,
+  handleSelectReading,
+}: {
+  page?: PageNames;
+  handleSelectReading: Function;
+}) {
   switch (page) {
     case 'readings':
-      return <AppReadings />;
+      return <AppReadings handleSelect={handleSelectReading} />;
     default:
       return <ReadingTimer />;
   }
@@ -23,6 +30,9 @@ function AppBody({ page }: { page?: PageNames }) {
 
 function App() {
   const [page, setPage] = useState<PageNames>('timer');
+  const [activeReading, setActiveReading] = useState<PartialReading>(
+    useContext(ActiveReading)
+  );
 
   const menuItems: MenuItem[] = [
     {
@@ -37,13 +47,20 @@ function App() {
     },
   ];
 
+  const handleSelectReading = (reading: Reading) => {
+    setActiveReading(reading);
+    setPage('timer');
+  };
+
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <AppMenu open={false} items={menuItems} />
-      <Box sx={{ flexGrow: 1, py: 4 }}>
-        <AppBody page={page} />
+    <ActiveReading.Provider value={activeReading}>
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <AppMenu open={false} items={menuItems} />
+        <Box sx={{ flexGrow: 1, py: 4 }}>
+          <AppBody page={page} handleSelectReading={handleSelectReading} />
+        </Box>
       </Box>
-    </Box>
+    </ActiveReading.Provider>
   );
 }
 
