@@ -31,17 +31,28 @@ export default function ReadingTimer() {
 
   let displayText;
   if (reading.active) {
-    displayText = `Reading page ${reading.pages.current}`;
+    displayText = (
+      <Typography>
+        Reading page {reading.pages.current}
+        <br />
+        Time left: {reading.timeLeft || 'unknown'}
+      </Typography>
+    );
   } else if (reading.isFirstTime) {
-    displayText = 'Press anywhere to start';
+    displayText = <Typography>Press anywhere to start</Typography>;
   } else {
-    displayText = `Paused on page ${reading.pages.current}`;
+    displayText = (
+      <Typography>
+        Paused on page {reading.pages.current} <br />
+        Time left: {reading.timeLeft || 'unknown'}
+      </Typography>
+    );
   }
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
-      console.log('time left: ', reading.timeLeft);
-      console.log('time running: ', reading.timeRunning);
+      console.log('time left: ', reading.timeLeftOnPage);
+      console.log('time running: ', reading.timeSpentOnPage);
     }, 1000);
     return () => clearInterval(checkInterval);
   }, [reading]);
@@ -56,7 +67,7 @@ export default function ReadingTimer() {
         height: '100%',
       }}
     >
-      <Typography>{displayText}</Typography>
+      {displayText}
       <Stack direction="row">
         <IconButton
           aria-label="previous page"

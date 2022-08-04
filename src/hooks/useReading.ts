@@ -38,7 +38,6 @@ export function usePageTimes(
       return recent.sort((a, b) => a - b);
     },
     get median() {
-      // const sorted = getSorted(maxPages);
       const sorted = this.sorted;
       const middle = (sorted.length - 1) / 2;
       if (Number.isInteger(middle)) {
@@ -152,14 +151,23 @@ export function useActiveReading(
       });
   };
 
+  const getTimeLeft = () => {
+    const { current, end } = reading.pages;
+    if (!end || !pageTimes.buffer.length) return null;
+    return (end - current - 1) * pageTimes.median; // TODO: format as string
+  };
+
   return {
     ...reading,
     ..._.pick(timer, ['pause', 'paused', 'active']),
-    get timeLeft() {
+    get timeLeftOnPage() {
       return timer.timeLeft;
     },
-    get timeRunning() {
+    get timeSpentOnPage() {
       return timer.timeRunning;
+    },
+    get timeLeft() {
+      return getTimeLeft();
     },
     start,
     nextPage,
