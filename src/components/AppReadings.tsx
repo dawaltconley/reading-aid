@@ -30,36 +30,42 @@ import { useReading } from '../hooks/useReading';
 
 const AppReadingsList = ({
   readings,
+  handleSelect,
   handleEdit,
   handleDelete,
 }: {
   readings: Reading[];
+  handleSelect: Function;
   handleEdit?: Function;
   handleDelete?: Function;
 }) => (
   <List>
     {readings.map(reading => (
       <ListItem key={reading.id}>
-        <ListItemText
-          primary={reading.title}
-          secondary={
-            <span>
-              {`pp. ${reading.pages.start}-${reading.pages.end || ''}`}
-              <br />
-              {`Time remaining: (need to implement)`}
-            </span>
-          }
-        />
-        {handleEdit && (
-          <IconButton aria-label="edit" onClick={() => handleEdit(reading)}>
-            <FontAwesomeIcon icon={iconEdit} />
-          </IconButton>
-        )}
-        {handleDelete && (
-          <IconButton aria-label="delete" onClick={() => handleDelete(reading)}>
-            <FontAwesomeIcon icon={iconDelete} />
-          </IconButton>
-        )}
+        <ListItemButton onClick={() => handleSelect(reading)}>
+          <ListItemText
+            primary={reading.title}
+            secondary={
+              <span>
+                {`pp. ${reading.pages.start}-${reading.pages.end || ''}`}
+                <br />
+                {`Time remaining: (need to implement)`}
+              </span>
+            }
+          />
+          <ButtonGroup size="large">
+            {handleEdit && (
+              <Button aria-label="edit" onClick={() => handleEdit(reading)}>
+                <FontAwesomeIcon icon={iconEdit} />
+              </Button>
+            )}
+            {handleDelete && (
+              <Button aria-label="delete" onClick={() => handleDelete(reading)}>
+                <FontAwesomeIcon icon={iconDelete} />
+              </Button>
+            )}
+          </ButtonGroup>
+        </ListItemButton>
       </ListItem>
     ))}
   </List>
@@ -139,7 +145,9 @@ const ReadingForm = ({
   );
 };
 
-function AppReadings() {
+function AppReadings(props: { handleSelect: Function }) {
+  const { handleSelect } = props;
+
   const [savedReadings, setSavedReadings] = useState<Reading[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -178,6 +186,7 @@ function AppReadings() {
       ) : (
         <AppReadingsList
           readings={savedReadings}
+          handleSelect={handleSelect}
           handleEdit={openForm}
           handleDelete={deleteReading}
         />
