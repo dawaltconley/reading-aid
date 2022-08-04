@@ -98,26 +98,6 @@ export function useReading(options: PartialReading = {}) {
     });
   }, [data]);
 
-  // const saveReading = async (updates: PartialReading & { title: string }) => {
-  //   const now = new Date();
-  //   const defaults = {
-  //     id: updates.title + ' ' + now.getTime().toString(),
-  //     pages: {
-  //       start: 1,
-  //       buffer: [],
-  //     },
-  //     dateCreated: now,
-  //     isCompleted: false,
-  //   };
-  //   const updated: Reading = _.merge(defaults, data, updates, {
-  //     pages: { current: currentPage },
-  //     dateModified: now,
-  //   });
-  //   db.update({ ...updated, isSaved: true }).then(() => {
-  //     setIsSaved(true);
-  //   });
-  // };
-
   const deleteReading = () =>
     isSaved && data.id && db.delete(data.id).then(() => setIsSaved(false));
 
@@ -182,14 +162,13 @@ export function useActiveReading(
 
   return {
     ...reading,
-    ..._.pick(timer, [
-      'pause',
-      'paused',
-      'active',
-      'timeLeft',
-      'timeRunning',
-      'timePaused',
-    ]),
+    ..._.pick(timer, ['pause', 'paused', 'active']),
+    get timeLeft() {
+      return timer.timeLeft;
+    },
+    get timeRunning() {
+      return timer.timeRunning;
+    },
     start,
     nextPage,
   };
