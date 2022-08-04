@@ -1,3 +1,11 @@
+import { IconDefinition } from '@fortawesome/pro-solid-svg-icons';
+
+export interface MenuItem {
+  name: string;
+  icon: IconDefinition;
+  action: Function;
+}
+
 interface Pages {
   start: number;
   end?: number;
