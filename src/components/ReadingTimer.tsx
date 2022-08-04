@@ -29,9 +29,14 @@ export default function ReadingTimer() {
     timeUpCallback: playBell,
   });
 
-  const displayText = reading.active
-    ? `Current page: ${reading.pages.current}`
-    : 'Press anywhere to start';
+  let displayText;
+  if (reading.active) {
+    displayText = `Reading page ${reading.pages.current}`;
+  } else if (reading.isFirstTime) {
+    displayText = 'Press anywhere to start';
+  } else {
+    displayText = `Paused on page ${reading.pages.current}`;
+  }
 
   useEffect(() => {
     const checkInterval = setInterval(() => {

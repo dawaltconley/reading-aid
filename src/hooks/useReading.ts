@@ -163,5 +163,6 @@ export function useActiveReading(
     },
     start,
     nextPage,
+    isFirstTime,
   };
 }
