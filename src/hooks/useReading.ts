@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { useState, useEffect, useContext } from 'react';
 import db from '../services/Database';
 import { usePauseableTimer } from '../hooks/usePauseableTimer';
-import Settings from '../context/settings';
+import Settings from '../context/Settings';
 
 /**
  * Hook for the time it took to read pages so far.
