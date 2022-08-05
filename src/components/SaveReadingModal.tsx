@@ -58,6 +58,15 @@ export default function SaveReadingModal({
     currentPage >= startPage &&
     (!endPage || currentPage <= endPage);
 
+  useEffect(() => {
+    let guess = currentPage;
+    if (startPage > currentPage)
+      guess = startPage + reading.pages.buffer.length;
+    if (endPage && currentPage > endPage) guess = endPage;
+    console.log('guessing', guess);
+    setCurrentPage(guess);
+  }, [startPage, endPage, reading.pages.buffer.length]);
+
   return (
     <Dialog open={isOpen} onBackdropClick={() => close()}>
       <DialogTitle>New reading</DialogTitle>
