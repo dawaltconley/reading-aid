@@ -2,7 +2,12 @@ import { MenuItem, Reading, ReadingPartial } from '../../types/common';
 
 import { useState, useContext } from 'react';
 import { Box, Container } from '@mui/material';
-import { faFolderOpen, faDownload } from '@fortawesome/pro-solid-svg-icons';
+import {
+  faFloppyDisk,
+  faFolderOpen,
+  faDownload,
+  faCloudArrowDown,
+} from '@fortawesome/pro-solid-svg-icons';
 
 import './App.css';
 
@@ -10,6 +15,7 @@ import ActiveReading from '../context/ActiveReading';
 import AppMenu from './AppMenu';
 import AppReadings from './AppReadings';
 import ReadingTimer from './ReadingTimer';
+import SaveReadingModal from './SaveReadingModal';
 
 type PageNames = 'readings' | 'timer';
 
@@ -33,8 +39,14 @@ function App() {
   const [activeReading, setActiveReading] = useState<ReadingPartial>(
     useContext(ActiveReading)
   );
+  const [saveModalIsOpen, setSaveModalIsOpen] = useState(false);
 
   const menuItems: MenuItem[] = [
+    {
+      name: 'Save',
+      icon: faFloppyDisk,
+      action: () => setSaveModalIsOpen(true),
+    },
     {
       name: 'Load',
       icon: faFolderOpen,
@@ -42,7 +54,7 @@ function App() {
     },
     {
       name: 'Install',
-      icon: faDownload,
+      icon: faCloudArrowDown,
       action: () => console.log('not implemented'),
     },
   ];
@@ -58,6 +70,14 @@ function App() {
         <AppMenu open={false} items={menuItems} />
         <Box sx={{ flexGrow: 1, py: 4 }}>
           <AppBody page={page} handleSelectReading={handleSelectReading} />
+          {saveModalIsOpen && (
+            <SaveReadingModal
+              reading={activeReading}
+              isOpen={saveModalIsOpen}
+              close={() => setSaveModalIsOpen(false)}
+              update={() => {}}
+            />
+          )}
         </Box>
       </Box>
     </ActiveReading.Provider>

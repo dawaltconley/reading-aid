@@ -26,7 +26,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons';
 
 import db from '../services/Database';
-import { useReading } from '../hooks/useReading';
+import SaveReadingModal from './SaveReadingModal';
 
 const AppReadingsList = ({
   readings,
@@ -70,80 +70,6 @@ const AppReadingsList = ({
     ))}
   </List>
 );
-
-const ReadingForm = ({
-  reading: loadReading,
-  isOpen,
-  close,
-  update,
-}: {
-  reading?: Partial<Reading>;
-  isOpen: boolean;
-  close: Function;
-  update: Function;
-}) => {
-  const reading = useReading(loadReading);
-  const [title, setTitle] = useState(reading.title);
-  const [startPage, setStartPage] = useState(reading.pages.start);
-  const [endPage, setEndPage] = useState(reading.pages.end);
-
-  console.log('rendering form');
-  console.log({ title, startPage, endPage });
-
-  const handleSubmit = () => {
-    if (!title) throw new Error('title is required');
-    console.log('submitting update');
-    reading
-      .update({
-        title: title,
-        pages: {
-          start: startPage,
-          end: endPage,
-        },
-      })
-      .then(() => {
-        update();
-        close();
-      });
-  };
-
-  return (
-    <Dialog open={isOpen} onBackdropClick={() => close()}>
-      <DialogTitle>New reading</DialogTitle>
-      <DialogContent>
-        <TextField
-          id="new-title"
-          label="Title"
-          required
-          variant="standard"
-          defaultValue={title}
-          onChange={({ target }) => setTitle(target.value)}
-        />
-        <TextField
-          id="new-page-start"
-          label="First page"
-          required
-          type="number"
-          variant="standard"
-          defaultValue={startPage}
-          onChange={({ target }) => setStartPage(Number(target.value))}
-        />
-        <TextField
-          id="new-page-end"
-          label="Last page"
-          type="number"
-          variant="standard"
-          defaultValue={endPage}
-          onChange={({ target }) => setEndPage(Number(target.value))}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => handleSubmit()}>Submit</Button>
-        <Button onClick={() => close()}>Cancel</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
 
 function AppReadings(props: { handleSelect: Function }) {
   const { handleSelect } = props;
@@ -193,7 +119,7 @@ function AppReadings(props: { handleSelect: Function }) {
       )}
       <Button onClick={() => openForm()}>New reading</Button>
       {formIsOpen && (
-        <ReadingForm
+        <SaveReadingModal
           reading={formReading || undefined}
           isOpen={formIsOpen}
           close={closeForm}
