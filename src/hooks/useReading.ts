@@ -135,17 +135,17 @@ export function useActiveReading(
     timer.start();
 
     const { current, end } = reading.pages;
-    if (end && current < end)
+    if (end && current === end)
       reading.update({
+        isCompleted: true,
         pages: {
-          current: reading.pages.current + 1,
           buffer: pageTimes.buffer,
         },
       });
     else
       reading.update({
-        isCompleted: true,
         pages: {
+          current: reading.pages.current + 1,
           buffer: pageTimes.buffer,
         },
       });
