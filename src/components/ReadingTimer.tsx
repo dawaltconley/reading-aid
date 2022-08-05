@@ -1,3 +1,5 @@
+import { ReadingActive } from '../../types/common';
+
 import { useEffect, useContext } from 'react';
 import {
   Container,
@@ -18,36 +20,64 @@ import { useActiveReading } from '../hooks/useReading';
 import ActiveReading from '../context/ActiveReading';
 import bellSound from '../assets/bell.mp3';
 
+/** format milliseconds as a human-readable string */
+const formatTime = (milliseconds: number): string => {
+  let seconds = Math.ceil(milliseconds / 1000);
+  let s = seconds % 60;
+  let m = ((seconds -= s) % 3600) / 60;
+  let h = (seconds -= m * 60) / 3600;
+  let formatted = [s + 's'];
+  if (h || m) formatted.unshift(m + 'm');
+  if (h) formatted.unshift(h + 'h');
+  return formatted.join(' ');
+};
+
 const bell = new Audio(bellSound);
 const playBell = () => {
   if (!bell.paused) return (bell.currentTime = 0);
   return bell.play();
 };
 
+function DisplayText({ reading }: { reading: ReadingActive }) {
+  let currentPage;
+  if (reading.active) {
+    currentPage = `Reading page ${reading.pages.current}`;
+  } else if (reading.isFirstTime) {
+    currentPage = `Press anywhere to start`;
+  } else {
+    currentPage = `Paused on page ${reading.pages.current}`;
+  }
+
+  const timeLeft = `Time left: ${
+    reading.timeLeft ? formatTime(reading.timeLeft) : 'unknown'
+  }`;
+
+  const timeDone = `Finish at: ${
+    reading.timeDone
+      ? new Date(reading.timeDone).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+        })
+      : 'unknown'
+  }`;
+
+  return (
+    <Typography>
+      {currentPage}
+      <br />
+      {timeLeft}
+      <br />
+      {timeDone}
+    </Typography>
+  );
+}
+
 export default function ReadingTimer() {
   const reading = useActiveReading(useContext(ActiveReading), {
     timeUpCallback: playBell,
   });
-
-  let displayText;
-  if (reading.active) {
-    displayText = (
-      <Typography>
-        Reading page {reading.pages.current}
-        <br />
-        Time left: {reading.timeLeft || 'unknown'}
-      </Typography>
-    );
-  } else if (reading.isFirstTime) {
-    displayText = <Typography>Press anywhere to start</Typography>;
-  } else {
-    displayText = (
-      <Typography>
-        Paused on page {reading.pages.current} <br />
-        Time left: {reading.timeLeft || 'unknown'}
-      </Typography>
-    );
-  }
 
   useEffect(() => {
     const checkInterval = setInterval(() => {
@@ -67,7 +97,7 @@ export default function ReadingTimer() {
         height: '100%',
       }}
     >
-      {displayText}
+      <DisplayText reading={reading} />
       <Stack direction="row">
         <IconButton
           aria-label="previous page"
