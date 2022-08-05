@@ -23,20 +23,20 @@ export interface Reading {
   isSaved: boolean;
 }
 
-export interface PartialReading extends Partial<Reading> {
+export interface ReadingPartial extends Partial<Reading> {
   pages?: Partial<Pages>;
 }
 
-export interface MinimalReading
+export interface ReadingMinimal
   extends Pick<Reading, 'pages' | 'isCompleted' | 'isSaved'>,
-    PartialReading {}
+    ReadingPartial {}
 
-export interface ReadingHook extends MinimalReading {
-  update: (PartialReading) => Promise<void>;
+export interface ReadingHook extends ReadingMinimal {
+  update: (ReadingPartial) => Promise<void>;
   delete: () => void;
 }
 
-export interface ActiveReading extends MinimalReading {
+export interface ReadingActive extends ReadingMinimal {
   start: () => void;
   pause: () => void;
   nextPage: () => void;
@@ -46,5 +46,5 @@ export interface ActiveReading extends MinimalReading {
   timeLeftOnPage: number;
   timeSpentOnPage: number;
   timeLeft: number | null;
-  endTime: number | null;
+  timeDone: number | null;
 }

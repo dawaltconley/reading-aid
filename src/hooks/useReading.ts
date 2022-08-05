@@ -1,4 +1,4 @@
-import { ActiveReading, PartialReading, ReadingHook } from '../../types/common';
+import { ReadingPartial, ReadingHook, ReadingActive } from '../../types/common';
 
 import _ from 'lodash';
 import { useState, useEffect, useContext, useRef } from 'react';
@@ -54,7 +54,7 @@ export function usePageTimes(
 /**
  * Hook for interacting with Reading-type objects.
  */
-export function useReading(options: PartialReading = {}): ReadingHook {
+export function useReading(options: ReadingPartial = {}): ReadingHook {
   const { dateModified, ...reading } = options;
   const [data, setData] = useState(
     _.merge(
@@ -69,7 +69,7 @@ export function useReading(options: PartialReading = {}): ReadingHook {
   const [isSaved, setIsSaved] = useState(options.isSaved);
 
   console.log('current page', data.pages.current);
-  const update = async (updates: PartialReading) => {
+  const update = async (updates: ReadingPartial) => {
     console.log('updating', { updates }, { data });
     let updated = _.merge({ ...data }, updates);
     if (_.isEqual(data, updated)) return;
@@ -106,9 +106,9 @@ export function useReading(options: PartialReading = {}): ReadingHook {
 }
 
 export function useActiveReading(
-  readingData: PartialReading,
+  readingData: ReadingPartial,
   options: { timeUpCallback: Function }
-): ActiveReading {
+): ReadingActive {
   const { maxBufferLength, extraReadingTime } = useContext(Settings);
   const { timeUpCallback } = options;
 
@@ -157,7 +157,7 @@ export function useActiveReading(
     return (end - current - 1) * pageTimes.median;
   };
 
-  const getEndTime = (): number | null => {
+  const getTimeDone = (): number | null => {
     const timeLeft = getTimeLeft();
     if (!timeLeft) return null;
     const done = new Date(Date.now() + timeLeft);
@@ -179,8 +179,8 @@ export function useActiveReading(
     get timeLeft() {
       return getTimeLeft();
     },
-    get endTime() {
-      return getEndTime();
+    get timeDone() {
+      return getTimeDone();
     },
   };
 }

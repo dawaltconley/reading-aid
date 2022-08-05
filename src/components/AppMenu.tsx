@@ -1,4 +1,4 @@
-import { MenuItem, PartialReading } from '../../types/common';
+import { MenuItem, ReadingPartial } from '../../types/common';
 import { useState, useContext } from 'react';
 import {
   AppBar,
@@ -21,7 +21,7 @@ import ActiveReading from '../context/ActiveReading';
 function AppMenu(props: { items: MenuItem[]; open: boolean }) {
   const { items = [] } = props;
 
-  const activeReading: PartialReading = useContext(ActiveReading);
+  const activeReading: ReadingPartial = useContext(ActiveReading);
   const [open, setOpen] = useState(props.open);
   const toggleDrawer = () => setOpen(!open);
 

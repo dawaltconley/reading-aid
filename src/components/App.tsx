@@ -1,4 +1,4 @@
-import { MenuItem, Reading, PartialReading } from '../../types/common';
+import { MenuItem, Reading, ReadingPartial } from '../../types/common';
 
 import { useState, useContext } from 'react';
 import { Box, Container } from '@mui/material';
@@ -30,7 +30,7 @@ function AppBody({
 
 function App() {
   const [page, setPage] = useState<PageNames>('timer');
-  const [activeReading, setActiveReading] = useState<PartialReading>(
+  const [activeReading, setActiveReading] = useState<ReadingPartial>(
     useContext(ActiveReading)
   );
 
