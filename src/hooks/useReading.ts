@@ -1,4 +1,4 @@
-import { Reading, PartialReading } from '../../types/common';
+import { ActiveReading, PartialReading, ReadingHook } from '../../types/common';
 
 import _ from 'lodash';
 import { useState, useEffect, useContext, useRef } from 'react';
@@ -54,7 +54,7 @@ export function usePageTimes(
 /**
  * Hook for interacting with Reading-type objects.
  */
-export function useReading(options: PartialReading = {}) {
+export function useReading(options: PartialReading = {}): ReadingHook {
   const { dateModified, ...reading } = options;
   const [data, setData] = useState(
     _.merge(
@@ -108,7 +108,7 @@ export function useReading(options: PartialReading = {}) {
 export function useActiveReading(
   readingData: PartialReading,
   options: { timeUpCallback: Function }
-) {
+): ActiveReading {
   const { maxBufferLength, extraReadingTime } = useContext(Settings);
   const { timeUpCallback } = options;
 
@@ -151,15 +151,25 @@ export function useActiveReading(
       });
   };
 
-  const getTimeLeft = () => {
+  const getTimeLeft = (): number | null => {
     const { current, end } = reading.pages;
     if (!end || !pageTimes.buffer.length) return null;
-    return (end - current - 1) * pageTimes.median; // TODO: format as string
+    return (end - current - 1) * pageTimes.median;
+  };
+
+  const getEndTime = (): number | null => {
+    const timeLeft = getTimeLeft();
+    if (!timeLeft) return null;
+    const done = new Date(Date.now() + timeLeft);
+    return done.getTime();
   };
 
   return {
     ...reading,
     ..._.pick(timer, ['pause', 'paused', 'active']),
+    start,
+    nextPage,
+    isFirstTime,
     get timeLeftOnPage() {
       return timer.timeLeft;
     },
@@ -169,8 +179,8 @@ export function useActiveReading(
     get timeLeft() {
       return getTimeLeft();
     },
-    start,
-    nextPage,
-    isFirstTime,
+    get endTime() {
+      return getEndTime();
+    },
   };
 }
