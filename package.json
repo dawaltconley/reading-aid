@@ -42,6 +42,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "deploy": "npm run build && npx netlify deploy --prod --dir build",
     "eject": "react-scripts eject"
   },
   "browserslist": {
@@ -58,6 +59,7 @@
   },
   "devDependencies": {
     "eslint-config-prettier": "^8.5.0",
+    "netlify-cli": "^10.16.0",
     "prettier": "^2.7.1"
   }
 }
