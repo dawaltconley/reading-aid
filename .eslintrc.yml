@@ -4,7 +4,6 @@ plugins:
 extends:
   - react-app
   - react-app/jest
-  - 'eslint:recommended'
   - 'prettier'
 env:
   es2022: true
