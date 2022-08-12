@@ -14,4 +14,3 @@ parserOptions:
   sourceType: module
 rules:
   no-unused-vars: warn
-  semi: warn
